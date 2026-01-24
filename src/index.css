@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* Repet 브랜드 CSS 변수 */
+:root {
+  /* Primary (주황) */
+  --color-primary: #f97316;
+  --color-primary-50: #fff7ed;
+  --color-primary-100: #ffedd5;
+  --color-primary-200: #fed7aa;
+  --color-primary-600: #ea580c;
+  --color-primary-700: #c2410c;
+
+  /* Secondary (남색) */
+  --color-secondary: #1e3a8a;
+  --color-secondary-100: #dbeafe;
+  --color-secondary-800: #1e40af;
+  --color-secondary-900: #1e3a8a;
+  --color-secondary-950: #172554;
+
+  /* Background */
+  --color-background: #fff7ed;
+  --color-background-light: #fffbf5;
+
+  /* Text */
+  --color-text: #475569;
+  --color-text-secondary: #64748b;
+}
+
+/* Repet 브랜드 기본 스타일 */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-secondary-900);
+}
+
+/* 텍스트 말줄임 - 표준 속성 포함 */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  line-clamp: 1; /* 표준 속성 추가 */
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2; /* 표준 속성 추가 */
+  overflow: hidden;
+}
+
+/* React Big Calendar 커스터마이징 */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-header {
+  padding: 10px 3px;
+  font-weight: 600;
+  border-bottom: 2px solid #fed7aa;
+  color: #1e3a8a;
+}
+
+.rbc-today {
+  background-color: #fff7ed;
+}
+
+.rbc-event {
+  padding: 2px 5px;
+  font-size: 0.875rem;
+}
+
+.rbc-toolbar {
+  margin-bottom: 1rem;
+}
+
+.rbc-toolbar button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #fed7aa;
+  background: white;
+  color: #1e3a8a;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.rbc-toolbar button:hover {
+  background: #fff7ed;
+  border-color: #f97316;
+}
+
+.rbc-toolbar button.rbc-active {
+  background: #f97316;
+  color: white;
+  border-color: #f97316;
+}
+
+.rbc-toolbar-label {
+  font-weight: 700;
+  color: #1e3a8a;
+  font-size: 1.125rem;
+}
+
+.rbc-off-range-bg {
+  background: #fffbf5;
+}
+
+.rbc-date-cell {
+  padding: 0.5rem;
+}
+
+.rbc-selected-cell {
+  background-color: #ffedd5;
+}
+/* 페이드인 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-in-out;
+}
