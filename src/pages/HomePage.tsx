@@ -1,7 +1,8 @@
 import { Card, Button, Badge } from "../components/common";
-import { Dog, Calendar, Users, Store } from "lucide-react";
+import { Dog, Calendar, Users, Store, MessageSquare } from "lucide-react";
 import { usePetStore } from "../stores/usePetStore";
 import { useCalendarStore } from "../stores/useCalendarStore";
+import { useServiceStore } from "../stores/useServiceStore";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -11,13 +12,25 @@ const eventTypeLabels: Record<string, string> = {
   grooming: "미용",
   training: "훈련",
   hotel: "호텔",
+  hospital: "동물병원",
   other: "기타",
+};
+
+const serviceTypeLabels: Record<string, string> = {
+  hotel: "호텔",
+  training: "훈련",
+  grooming: "미용",
+  hospital: "병원",
 };
 
 export default function HomePage() {
   const navigate = useNavigate();
   const pets = usePetStore((state) => state.pets);
   const events = useCalendarStore((state) => state.events);
+
+  // Service Store - 최근 리포트
+  const getRecentComments = useServiceStore((state) => state.getRecentComments);
+  const recentReports = getRecentComments(5);
 
   // 통계 계산
   const totalPets = pets.length;
@@ -204,6 +217,76 @@ export default function HomePage() {
                 <p className="text-sm text-gray-600">{pet.breed}</p>
               </div>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {/* 오늘의 리포트 - Daily Report from Providers */}
+      {recentReports.length > 0 && (
+        <Card title="📋 오늘의 리포트">
+          <div className="space-y-4">
+            {recentReports.map((report) => {
+              const pet = pets.find((p) => p.id === report.petId);
+              return (
+                <div
+                  key={report.id}
+                  className="bg-gradient-to-r from-orange-50 to-white p-4 rounded-xl border border-orange-100 shadow-sm"
+                >
+                  {/* 헤더 */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                        style={{ backgroundColor: pet?.color || "#f97316" }}
+                      >
+                        {report.petName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-blue-900">
+                          {report.petName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {report.providerName} ·{" "}
+                          {serviceTypeLabels[report.serviceType]}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="success">리포트</Badge>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {format(new Date(report.createdAt), "M월 d일 HH:mm", {
+                          locale: ko,
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 리포트 내용 */}
+                  <div className="bg-white p-3 rounded-lg border border-gray-100">
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {report.comment}
+                    </p>
+                  </div>
+
+                  {/* 이미지가 있으면 표시 */}
+                  {report.imageUrl && (
+                    <div className="mt-3">
+                      <img
+                        src={report.imageUrl}
+                        alt={`${report.petName} 리포트 이미지`}
+                        className="w-full max-w-sm rounded-lg border border-gray-200 shadow-sm"
+                      />
+                    </div>
+                  )}
+
+                  {/* 작성자 */}
+                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                    <MessageSquare size={14} />
+                    <span>{report.createdBy} 님이 작성</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}

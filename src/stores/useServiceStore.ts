@@ -19,17 +19,24 @@ interface ServiceState {
 
   // 예약 관리
   bookings: ServiceBooking[];
-  createBooking: (booking: Omit<ServiceBooking, "id" | "createdAt">) => void;
+  createBooking: (
+    booking: Omit<ServiceBooking, "id" | "createdAt">,
+  ) => ServiceBooking;
   updateBooking: (id: string, booking: Partial<ServiceBooking>) => void;
   cancelBooking: (id: string) => void;
+  completeBooking: (id: string) => void; // 예약 완료 처리
+  getBookingById: (id: string) => ServiceBooking | undefined;
   getBookingsByPet: (petId: string) => ServiceBooking[];
+  getBookingsByProvider: (providerId: string) => ServiceBooking[]; // 업체별 예약 조회
   getUpcomingBookings: () => ServiceBooking[];
+  getCompletedBookings: (providerId: string) => ServiceBooking[]; // 완료된 예약 조회
 
   // 코멘트 관리
   comments: ProviderComment[];
   addComment: (comment: Omit<ProviderComment, "id" | "createdAt">) => void;
   getCommentsByPet: (petId: string) => ProviderComment[];
   getCommentsByProvider: (providerId: string) => ProviderComment[];
+  getCommentsByBooking: (bookingId: string) => ProviderComment | undefined; // 예약별 코멘트
   getRecentComments: (limit?: number) => ProviderComment[];
 }
 
@@ -168,7 +175,7 @@ export const useServiceStore = create<ServiceState>()(
       // 예약 관리
       bookings: [],
 
-      // 예약 생성
+      // 예약 생성 (생성된 booking 반환 - Calendar 연동용)
       createBooking: (bookingData) => {
         const newBooking: ServiceBooking = {
           ...bookingData,
@@ -176,6 +183,7 @@ export const useServiceStore = create<ServiceState>()(
           createdAt: new Date().toISOString(),
         };
         set((state) => ({ bookings: [...state.bookings, newBooking] }));
+        return newBooking;
       },
 
       // 예약 수정
@@ -198,9 +206,32 @@ export const useServiceStore = create<ServiceState>()(
         }));
       },
 
+      // 예약 완료 처리
+      completeBooking: (id) => {
+        set((state) => ({
+          bookings: state.bookings.map((booking) =>
+            booking.id === id
+              ? { ...booking, status: "completed" as BookingStatus }
+              : booking,
+          ),
+        }));
+      },
+
+      // 예약 ID로 조회
+      getBookingById: (id) => {
+        return get().bookings.find((booking) => booking.id === id);
+      },
+
       // 반려견별 예약 조회
       getBookingsByPet: (petId) => {
         return get().bookings.filter((booking) => booking.petId === petId);
+      },
+
+      // 업체별 예약 조회
+      getBookingsByProvider: (providerId) => {
+        return get().bookings.filter(
+          (booking) => booking.providerId === providerId,
+        );
       },
 
       // 다가오는 예약 조회
@@ -216,6 +247,20 @@ export const useServiceStore = create<ServiceState>()(
           .sort(
             (a, b) =>
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+          );
+      },
+
+      // 완료된 예약 조회 (업체별)
+      getCompletedBookings: (providerId) => {
+        return get()
+          .bookings.filter(
+            (booking) =>
+              booking.providerId === providerId &&
+              booking.status === "completed",
+          )
+          .sort(
+            (a, b) =>
+              new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
           );
       },
 
@@ -250,6 +295,13 @@ export const useServiceStore = create<ServiceState>()(
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
+      },
+
+      // 예약별 코멘트 조회 (하나의 예약에 하나의 코멘트)
+      getCommentsByBooking: (bookingId) => {
+        return get().comments.find(
+          (comment) => comment.bookingId === bookingId,
+        );
       },
 
       // 최근 코멘트 조회

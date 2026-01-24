@@ -8,8 +8,10 @@ import {
   Select,
 } from "../components/common";
 import { useServiceStore } from "../stores/useServiceStore";
+import { useCalendarStore } from "../stores/useCalendarStore";
 import { usePetStore } from "../stores/usePetStore";
 import type { ServiceProvider, ServiceType } from "../types/service";
+import type { EventType } from "../types/calendar";
 import {
   Hotel,
   GraduationCap,
@@ -49,6 +51,9 @@ export default function ServicePage() {
   const getUpcomingBookings = useServiceStore(
     (state) => state.getUpcomingBookings,
   );
+
+  // Calendar Store 연동
+  const addCalendarEvent = useCalendarStore((state) => state.addEvent);
 
   const pets = usePetStore((state) => state.pets);
 
@@ -139,9 +144,42 @@ export default function ServicePage() {
 
     console.log("6. 예약 데이터:", bookingData);
 
-    createBooking(bookingData);
+    // 예약 생성
+    const createdBooking = createBooking(bookingData);
 
-    console.log("7. 예약 완료");
+    // ServiceType → EventType 매핑
+    const serviceTypeToEventType: Record<ServiceType, EventType> = {
+      hotel: "hotel",
+      training: "training",
+      grooming: "grooming",
+      hospital: "hospital",
+    };
+
+    // 캘린더 이벤트 생성
+    const startDateTime = new Date(bookingForm.startDate);
+    startDateTime.setHours(10, 0, 0, 0); // 기본 시작 시간 10:00
+
+    const endDateTime = bookingForm.endDate
+      ? new Date(bookingForm.endDate)
+      : new Date(bookingForm.startDate);
+    endDateTime.setHours(18, 0, 0, 0); // 기본 종료 시간 18:00
+
+    addCalendarEvent({
+      title: `${pet.name} ${bookingForm.serviceName}`,
+      start: startDateTime,
+      end: endDateTime,
+      type: serviceTypeToEventType[selectedProvider.type],
+      petId: pet.id,
+      petName: pet.name,
+      description:
+        bookingForm.notes ||
+        `${selectedProvider.name}에서 ${bookingForm.serviceName}`,
+      location: selectedProvider.address,
+      serviceProvider: selectedProvider.name,
+      bookingId: createdBooking.id,
+    });
+
+    console.log("7. 예약 및 캘린더 이벤트 생성 완료");
     console.log("8. 전체 예약 목록:", getUpcomingBookings());
 
     setIsBookingModalOpen(false);
@@ -154,7 +192,7 @@ export default function ServicePage() {
       notes: "",
     });
     setShowMyBookings(true);
-    alert("예약이 신청되었습니다!");
+    alert("예약이 신청되었습니다! 캘린더에도 일정이 추가되었습니다.");
   };
 
   const handleCancelBooking = (bookingId: string) => {

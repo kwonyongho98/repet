@@ -35,6 +35,7 @@ const eventTypeLabels: Record<string, string> = {
   grooming: "미용",
   training: "훈련",
   hotel: "호텔",
+  hospital: "동물병원",
   other: "기타",
 };
 
@@ -443,6 +444,7 @@ export default function CalendarPage() {
                 { value: "grooming", label: "미용" },
                 { value: "training", label: "훈련" },
                 { value: "hotel", label: "호텔" },
+                { value: "hospital", label: "동물병원" },
                 { value: "other", label: "기타" },
               ]}
               required
@@ -573,6 +575,7 @@ export default function CalendarPage() {
                 { value: "grooming", label: "미용" },
                 { value: "training", label: "훈련" },
                 { value: "hotel", label: "호텔" },
+                { value: "hospital", label: "동물병원" },
                 { value: "other", label: "기타" },
               ]}
               required

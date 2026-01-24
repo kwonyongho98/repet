@@ -36,19 +36,20 @@ export interface ServiceBooking {
   price: number;
   notes?: string;
   createdAt: string;
+  calendarEventId?: string; // CalendarEvent 연동용
 }
 
-// 업체 코멘트 (핵심 기능!)
+// 업체 코멘트 / 데일리 리포트 (핵심 기능!)
 export interface ProviderComment {
   id: string;
   providerId: string;
   providerName: string;
+  serviceType: ServiceType; // 서비스 타입 추가
   bookingId: string;
   petId: string;
   petName: string;
-  comment: string;
-  photos: string[];
-  rating: number;
+  comment: string; // 리포트 내용
+  imageUrl?: string; // 단일 이미지 (Base64 또는 URL)
   createdBy: string; // 업체 사장님 이름
   createdAt: string;
 }

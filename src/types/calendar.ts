@@ -1,4 +1,11 @@
-export type EventType = "health" | "grooming" | "training" | "hotel" | "other";
+// ServiceType과 매핑: hotel, training, grooming, hospital
+export type EventType =
+  | "health"
+  | "grooming"
+  | "training"
+  | "hotel"
+  | "hospital"
+  | "other";
 
 export interface CalendarEvent {
   id: string;
@@ -11,6 +18,7 @@ export interface CalendarEvent {
   description?: string;
   location?: string;
   serviceProvider?: string; // 업체명
+  bookingId?: string; // ServiceBooking 연동용
 }
 
 export interface Pet {
