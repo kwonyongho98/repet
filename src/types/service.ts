@@ -1,3 +1,5 @@
+import type { Pet } from "./pet";
+
 // 업체 타입
 export type ServiceType = "hotel" | "training" | "grooming" | "hospital";
 
@@ -21,6 +23,20 @@ export interface ServiceProvider {
   createdAt: string;
 }
 
+// 펫 정보 스냅샷 (예약 시점의 정보 저장용)
+export interface PetInfoSnapshot {
+  id: string;
+  name: string;
+  species: string;
+  breed: string;
+  age?: number;
+  gender: "male" | "female";
+  weight: number;
+  allergies?: string[];
+  vaccinationHistory?: Pet["vaccinationHistory"];
+  notes?: string;
+}
+
 // 서비스 예약
 export interface ServiceBooking {
   id: string;
@@ -37,6 +53,7 @@ export interface ServiceBooking {
   notes?: string;
   createdAt: string;
   calendarEventId?: string; // CalendarEvent 연동용
+  petInfo?: PetInfoSnapshot; // 3단계 추가: 예약 시점의 펫 상세 정보
 }
 
 // 업체 코멘트 / 데일리 리포트 (핵심 기능!)

@@ -10,7 +10,11 @@ import {
 import { useServiceStore } from "../stores/useServiceStore";
 import { useCalendarStore } from "../stores/useCalendarStore";
 import { usePetStore } from "../stores/usePetStore";
-import type { ServiceProvider, ServiceType } from "../types/service";
+import type {
+  ServiceProvider,
+  ServiceType,
+  PetInfoSnapshot,
+} from "../types/service";
 import type { EventType } from "../types/calendar";
 import {
   Hotel,
@@ -140,6 +144,19 @@ export default function ServicePage() {
       status: "pending" as const,
       price: 0,
       notes: bookingForm.notes,
+      // 3단계: 펫 상세 정보 스냅샷 추가
+      petInfo: {
+        id: pet.id,
+        name: pet.name,
+        species: pet.species,
+        breed: pet.breed,
+        age: pet.age,
+        gender: pet.gender,
+        weight: pet.weight,
+        allergies: pet.allergies,
+        vaccinationHistory: pet.vaccinationHistory,
+        notes: pet.notes,
+      } as PetInfoSnapshot,
     };
 
     console.log("6. 예약 데이터:", bookingData);

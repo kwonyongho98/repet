@@ -9,7 +9,7 @@ import {
   TextArea,
 } from "../components/common";
 import { usePetStore } from "../stores/usePetStore";
-import type { Pet } from "../types/pet";
+import type { Pet, VaccinationRecord } from "../types/pet";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
@@ -40,6 +40,17 @@ export default function PetListPage() {
     color: "#3B82F6",
     microchipId: "",
     notes: "",
+    allergies: "" as string, // 쉼표로 구분된 문자열로 입력받음
+    vaccinationHistory: [] as VaccinationRecord[],
+  });
+
+  // 새 접종 기록 입력용
+  const [newVaccination, setNewVaccination] = useState({
+    vaccineName: "",
+    date: "",
+    nextDueDate: "",
+    veterinarian: "",
+    notes: "",
   });
 
   // 나이 계산
@@ -69,12 +80,64 @@ export default function PetListPage() {
       color: "#3B82F6",
       microchipId: "",
       notes: "",
+      allergies: "",
+      vaccinationHistory: [],
+    });
+    setNewVaccination({
+      vaccineName: "",
+      date: "",
+      nextDueDate: "",
+      veterinarian: "",
+      notes: "",
+    });
+  };
+
+  // 접종 기록 추가
+  const addVaccination = () => {
+    if (!newVaccination.vaccineName || !newVaccination.date) return;
+
+    const vaccination: VaccinationRecord = {
+      id: Date.now().toString(),
+      vaccineName: newVaccination.vaccineName,
+      date: newVaccination.date,
+      nextDueDate: newVaccination.nextDueDate || undefined,
+      veterinarian: newVaccination.veterinarian || undefined,
+      notes: newVaccination.notes || undefined,
+    };
+
+    setFormData({
+      ...formData,
+      vaccinationHistory: [...formData.vaccinationHistory, vaccination],
+    });
+
+    setNewVaccination({
+      vaccineName: "",
+      date: "",
+      nextDueDate: "",
+      veterinarian: "",
+      notes: "",
+    });
+  };
+
+  // 접종 기록 삭제
+  const removeVaccination = (id: string) => {
+    setFormData({
+      ...formData,
+      vaccinationHistory: formData.vaccinationHistory.filter(
+        (v) => v.id !== id,
+      ),
     });
   };
 
   // 반려견 추가
   const handleAddPet = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 알레르기 문자열을 배열로 변환
+    const allergiesArray = formData.allergies
+      .split(",")
+      .map((a) => a.trim())
+      .filter((a) => a.length > 0);
 
     addPet({
       name: formData.name,
@@ -86,6 +149,11 @@ export default function PetListPage() {
       color: formData.color,
       microchipId: formData.microchipId || undefined,
       notes: formData.notes || undefined,
+      allergies: allergiesArray.length > 0 ? allergiesArray : undefined,
+      vaccinationHistory:
+        formData.vaccinationHistory.length > 0
+          ? formData.vaccinationHistory
+          : undefined,
     });
 
     setIsAddModalOpen(false);
@@ -98,6 +166,12 @@ export default function PetListPage() {
 
     if (!editingPet) return;
 
+    // 알레르기 문자열을 배열로 변환
+    const allergiesArray = formData.allergies
+      .split(",")
+      .map((a) => a.trim())
+      .filter((a) => a.length > 0);
+
     updatePet(editingPet.id, {
       name: formData.name,
       species: formData.species,
@@ -108,6 +182,11 @@ export default function PetListPage() {
       color: formData.color,
       microchipId: formData.microchipId || undefined,
       notes: formData.notes || undefined,
+      allergies: allergiesArray.length > 0 ? allergiesArray : undefined,
+      vaccinationHistory:
+        formData.vaccinationHistory.length > 0
+          ? formData.vaccinationHistory
+          : undefined,
     });
 
     setIsEditModalOpen(false);
@@ -139,6 +218,8 @@ export default function PetListPage() {
       color: pet.color,
       microchipId: pet.microchipId || "",
       notes: pet.notes || "",
+      allergies: pet.allergies?.join(", ") || "",
+      vaccinationHistory: pet.vaccinationHistory || [],
     });
     setIsEditModalOpen(true);
   };
@@ -284,6 +365,76 @@ export default function PetListPage() {
               </div>
             )}
 
+            {/* 알레르기 정보 */}
+            <div>
+              <p className="text-sm text-gray-600">알레르기</p>
+              {selectedPet.allergies && selectedPet.allergies.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {selectedPet.allergies.map((allergy, index) => (
+                    <Badge key={index} variant="warning">
+                      {allergy}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400 mt-1">등록된 알레르기 없음</p>
+              )}
+            </div>
+
+            {/* 접종 이력 */}
+            <div>
+              <p className="text-sm text-gray-600 mb-2">접종 이력</p>
+              {selectedPet.vaccinationHistory &&
+              selectedPet.vaccinationHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedPet.vaccinationHistory.map((vaccination) => (
+                    <div
+                      key={vaccination.id}
+                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">
+                            {vaccination.vaccineName}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            접종일:{" "}
+                            {format(
+                              new Date(vaccination.date),
+                              "yyyy년 M월 d일",
+                              { locale: ko },
+                            )}
+                          </p>
+                          {vaccination.nextDueDate && (
+                            <p className="text-sm text-orange-600">
+                              다음 접종:{" "}
+                              {format(
+                                new Date(vaccination.nextDueDate),
+                                "yyyy년 M월 d일",
+                                { locale: ko },
+                              )}
+                            </p>
+                          )}
+                        </div>
+                        {vaccination.veterinarian && (
+                          <Badge variant="info">
+                            {vaccination.veterinarian}
+                          </Badge>
+                        )}
+                      </div>
+                      {vaccination.notes && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {vaccination.notes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400">등록된 접종 이력 없음</p>
+              )}
+            </div>
+
             <div className="flex gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setSelectedPet(null)}>
                 닫기
@@ -417,13 +568,117 @@ export default function PetListPage() {
 
           <TextArea
             label="메모 (선택)"
-            placeholder="특이사항이나 알레르기 등을 입력하세요"
+            placeholder="특이사항 등을 입력하세요"
             rows={3}
             value={formData.notes}
             onChange={(e) =>
               setFormData({ ...formData, notes: e.target.value })
             }
           />
+
+          {/* 알레르기 입력 */}
+          <Input
+            label="알레르기 (선택)"
+            placeholder="쉼표로 구분하여 입력 (예: 닭고기, 밀, 유제품)"
+            value={formData.allergies}
+            onChange={(e) =>
+              setFormData({ ...formData, allergies: e.target.value })
+            }
+          />
+
+          {/* 접종 이력 입력 */}
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              접종 이력 (선택)
+            </p>
+
+            {/* 등록된 접종 목록 */}
+            {formData.vaccinationHistory.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {formData.vaccinationHistory.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                  >
+                    <div>
+                      <span className="font-medium">{v.vaccineName}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {v.date}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => removeVaccination(v.id)}
+                      className="text-red-500 text-sm px-2 py-1"
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 새 접종 기록 입력 */}
+            <div className="p-3 bg-gray-50 rounded-lg space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="백신명"
+                  placeholder="예: 종합백신(DHPPL)"
+                  value={newVaccination.vaccineName}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      vaccineName: e.target.value,
+                    })
+                  }
+                />
+                <Input
+                  label="접종일"
+                  type="date"
+                  value={newVaccination.date}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      date: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="다음 접종 예정일"
+                  type="date"
+                  value={newVaccination.nextDueDate}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      nextDueDate: e.target.value,
+                    })
+                  }
+                />
+                <Input
+                  label="접종 병원"
+                  placeholder="예: 해피동물병원"
+                  value={newVaccination.veterinarian}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      veterinarian: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addVaccination}
+                className="w-full"
+              >
+                + 접종 기록 추가
+              </Button>
+            </div>
+          </div>
 
           <div className="flex gap-3 pt-4">
             <Button
@@ -557,13 +812,117 @@ export default function PetListPage() {
 
           <TextArea
             label="메모 (선택)"
-            placeholder="특이사항이나 알레르기 등을 입력하세요"
+            placeholder="특이사항 등을 입력하세요"
             rows={3}
             value={formData.notes}
             onChange={(e) =>
               setFormData({ ...formData, notes: e.target.value })
             }
           />
+
+          {/* 알레르기 입력 */}
+          <Input
+            label="알레르기 (선택)"
+            placeholder="쉼표로 구분하여 입력 (예: 닭고기, 밀, 유제품)"
+            value={formData.allergies}
+            onChange={(e) =>
+              setFormData({ ...formData, allergies: e.target.value })
+            }
+          />
+
+          {/* 접종 이력 입력 */}
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              접종 이력 (선택)
+            </p>
+
+            {/* 등록된 접종 목록 */}
+            {formData.vaccinationHistory.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {formData.vaccinationHistory.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                  >
+                    <div>
+                      <span className="font-medium">{v.vaccineName}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {v.date}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => removeVaccination(v.id)}
+                      className="text-red-500 text-sm px-2 py-1"
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 새 접종 기록 입력 */}
+            <div className="p-3 bg-gray-50 rounded-lg space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="백신명"
+                  placeholder="예: 종합백신(DHPPL)"
+                  value={newVaccination.vaccineName}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      vaccineName: e.target.value,
+                    })
+                  }
+                />
+                <Input
+                  label="접종일"
+                  type="date"
+                  value={newVaccination.date}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      date: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="다음 접종 예정일"
+                  type="date"
+                  value={newVaccination.nextDueDate}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      nextDueDate: e.target.value,
+                    })
+                  }
+                />
+                <Input
+                  label="접종 병원"
+                  placeholder="예: 해피동물병원"
+                  value={newVaccination.veterinarian}
+                  onChange={(e) =>
+                    setNewVaccination({
+                      ...newVaccination,
+                      veterinarian: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addVaccination}
+                className="w-full"
+              >
+                + 접종 기록 추가
+              </Button>
+            </div>
+          </div>
 
           <div className="flex gap-3 pt-4">
             <Button

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, Button, Badge, Modal, TextArea } from "../../components/common";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useServiceStore } from "../../stores/useServiceStore";
-import type { ServiceBooking } from "../../types/service";
+import type { ServiceBooking, PetInfoSnapshot } from "../../types/service";
 import {
   Calendar,
   MessageSquare,
@@ -12,6 +12,9 @@ import {
   Camera,
   X,
   Check,
+  Info,
+  AlertTriangle,
+  Syringe,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -43,6 +46,19 @@ export default function ProviderDashboard() {
     comment: "",
     imageUrl: "",
   });
+
+  // 펫 정보 모달 상태 (3단계 추가)
+  const [isPetInfoModalOpen, setIsPetInfoModalOpen] = useState(false);
+  const [selectedPetInfo, setSelectedPetInfo] =
+    useState<PetInfoSnapshot | null>(null);
+
+  // 펫 정보 모달 열기
+  const openPetInfoModal = (petInfo: PetInfoSnapshot | undefined) => {
+    if (petInfo) {
+      setSelectedPetInfo(petInfo);
+      setIsPetInfoModalOpen(true);
+    }
+  };
 
   // 내 업체의 예약만 필터링
   const myBookings = bookings.filter((b) => b.providerId === user?.providerId);
@@ -284,12 +300,23 @@ export default function ProviderDashboard() {
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                 >
                   <div>
-                    <p
-                      className="font-bold"
-                      style={{ color: "var(--color-secondary-900)" }}
-                    >
-                      {booking.petName}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p
+                        className="font-bold"
+                        style={{ color: "var(--color-secondary-900)" }}
+                      >
+                        {booking.petName}
+                      </p>
+                      {booking.petInfo && (
+                        <button
+                          onClick={() => openPetInfoModal(booking.petInfo)}
+                          className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                          title="펫 정보 보기"
+                        >
+                          <Info size={16} className="text-orange-500" />
+                        </button>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">
                       {booking.serviceName} ·{" "}
                       {format(new Date(booking.startDate), "M월 d일 (E)", {
@@ -341,12 +368,23 @@ export default function ProviderDashboard() {
                     className="flex items-center justify-between p-4 bg-green-50 rounded-lg border-l-4 border-green-500"
                   >
                     <div>
-                      <p
-                        className="font-bold"
-                        style={{ color: "var(--color-secondary-900)" }}
-                      >
-                        {booking.petName}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p
+                          className="font-bold"
+                          style={{ color: "var(--color-secondary-900)" }}
+                        >
+                          {booking.petName}
+                        </p>
+                        {booking.petInfo && (
+                          <button
+                            onClick={() => openPetInfoModal(booking.petInfo)}
+                            className="p-1 rounded-full hover:bg-green-100 transition-colors"
+                            title="펫 정보 보기"
+                          >
+                            <Info size={16} className="text-orange-500" />
+                          </button>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-600">
                         {booking.serviceName} ·{" "}
                         {format(new Date(booking.startDate), "M월 d일 (E)", {
@@ -395,12 +433,23 @@ export default function ProviderDashboard() {
                     className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500"
                   >
                     <div>
-                      <p
-                        className="font-bold"
-                        style={{ color: "var(--color-secondary-900)" }}
-                      >
-                        {booking.petName}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p
+                          className="font-bold"
+                          style={{ color: "var(--color-secondary-900)" }}
+                        >
+                          {booking.petName}
+                        </p>
+                        {booking.petInfo && (
+                          <button
+                            onClick={() => openPetInfoModal(booking.petInfo)}
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+                            title="펫 정보 보기"
+                          >
+                            <Info size={16} className="text-orange-500" />
+                          </button>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-600">
                         {booking.serviceName}
                       </p>
@@ -528,6 +577,139 @@ export default function ProviderDashboard() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* 펫 정보 모달 (3단계 추가) */}
+      <Modal
+        isOpen={isPetInfoModalOpen}
+        onClose={() => {
+          setIsPetInfoModalOpen(false);
+          setSelectedPetInfo(null);
+        }}
+        title="🐕 펫 상세 정보"
+        maxWidth="lg"
+      >
+        {selectedPetInfo && (
+          <div className="space-y-4">
+            {/* 기본 정보 */}
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <h3 className="font-bold text-xl text-blue-900 mb-2">
+                {selectedPetInfo.name}
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <p>
+                  <span className="text-gray-500">종류:</span>{" "}
+                  {selectedPetInfo.species}
+                </p>
+                <p>
+                  <span className="text-gray-500">품종:</span>{" "}
+                  {selectedPetInfo.breed}
+                </p>
+                <p>
+                  <span className="text-gray-500">성별:</span>{" "}
+                  {selectedPetInfo.gender === "male" ? "남아" : "여아"}
+                </p>
+                <p>
+                  <span className="text-gray-500">몸무게:</span>{" "}
+                  {selectedPetInfo.weight}kg
+                </p>
+              </div>
+            </div>
+
+            {/* 알레르기 정보 - 중요! */}
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={20} className="text-red-500" />
+                <h4 className="font-bold text-red-700">알레르기 주의사항</h4>
+              </div>
+              {selectedPetInfo.allergies &&
+              selectedPetInfo.allergies.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedPetInfo.allergies.map((allergy, index) => (
+                    <Badge key={index} variant="warning">
+                      {allergy}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">
+                  등록된 알레르기가 없습니다.
+                </p>
+              )}
+            </div>
+
+            {/* 접종 이력 */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Syringe size={20} className="text-blue-500" />
+                <h4 className="font-bold text-blue-700">접종 이력</h4>
+              </div>
+              {selectedPetInfo.vaccinationHistory &&
+              selectedPetInfo.vaccinationHistory.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedPetInfo.vaccinationHistory.map((vaccination) => (
+                    <div
+                      key={vaccination.id}
+                      className="p-2 bg-white rounded border border-blue-100"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-sm">
+                            {vaccination.vaccineName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            접종일:{" "}
+                            {format(new Date(vaccination.date), "yyyy.MM.dd", {
+                              locale: ko,
+                            })}
+                          </p>
+                          {vaccination.nextDueDate && (
+                            <p className="text-xs text-orange-600">
+                              다음 접종:{" "}
+                              {format(
+                                new Date(vaccination.nextDueDate),
+                                "yyyy.MM.dd",
+                                { locale: ko },
+                              )}
+                            </p>
+                          )}
+                        </div>
+                        {vaccination.veterinarian && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                            {vaccination.veterinarian}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">
+                  등록된 접종 이력이 없습니다.
+                </p>
+              )}
+            </div>
+
+            {/* 메모 */}
+            {selectedPetInfo.notes && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-bold text-gray-700 mb-2">보호자 메모</h4>
+                <p className="text-sm text-gray-600">{selectedPetInfo.notes}</p>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setIsPetInfoModalOpen(false);
+                setSelectedPetInfo(null);
+              }}
+            >
+              닫기
+            </Button>
+          </div>
         )}
       </Modal>
     </div>
