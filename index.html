@@ -1,10 +1,86 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>repet</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>레펫(Repet) - 반려동물 라이프의 모든 기록</title>
+    <meta name="title" content="레펫(Repet) - 반려동물 라이프의 모든 기록" />
+    <meta name="description" content="산책 경로 자동 추적, 식사/배변/지출 기록, 가족 공유까지! 우리 아이의 모든 순간을 테마별 맞춤형 디자인으로 기록하세요." />
+    
+    <!-- Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#F97316" />
+    <meta name="background-color" content="#FFFFFF" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="레펫" />
+    <meta name="application-name" content="레펫" />
+    <meta name="msapplication-TileColor" content="#F97316" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-152x152.png" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Splash Screens for iOS -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://repet.app/" />
+    <meta property="og:title" content="레펫(Repet) - 반려동물 라이프의 모든 기록" />
+    <meta property="og:description" content="산책 경로 자동 추적, 식사/배변/지출 기록, 가족 공유까지! 우리 아이의 모든 순간을 테마별 맞춤형 디자인으로 기록하세요." />
+    <meta property="og:image" content="/icon-512x512.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://repet.app/" />
+    <meta property="twitter:title" content="레펫(Repet) - 반려동물 라이프의 모든 기록" />
+    <meta property="twitter:description" content="산책 경로 자동 추적, 식사/배변/지출 기록, 가족 공유까지! 우리 아이의 모든 순간을 테마별 맞춤형 디자인으로 기록하세요." />
+    <meta property="twitter:image" content="/icon-512x512.png" />
+    
+    <!-- Preconnect to Supabase -->
+    <link rel="preconnect" href="https://qckaojdksfqngprtgflv.supabase.co" />
+    <link rel="dns-prefetch" href="https://qckaojdksfqngprtgflv.supabase.co" />
+    
+    <!-- Preconnect to Google Fonts (if used) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Prevent zoom on input focus (iOS) -->
+    <style>
+      /* Prevent iOS zoom on input focus */
+      input, textarea, select {
+        font-size: 16px !important;
+      }
+      
+      /* Safe area insets for notched devices */
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      
+      /* Prevent pull-to-refresh */
+      html {
+        overscroll-behavior-y: contain;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

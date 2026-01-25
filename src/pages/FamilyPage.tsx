@@ -8,6 +8,7 @@ import {
   Badge,
 } from "../components/common";
 import { useFamilyStore } from "../stores/useFamilyStore";
+import { PartnerManageSection } from "../components/partner";
 import type { FamilyMember, FamilyRole } from "../types/family";
 import {
   Users,
@@ -534,6 +535,11 @@ export default function FamilyPage() {
           </div>
         </div>
       </Modal>
+
+      {/* 파트너 관리 섹션 */}
+      <div className="mt-8">
+        <PartnerManageSection />
+      </div>
     </div>
   );
 }
