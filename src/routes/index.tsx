@@ -9,6 +9,7 @@ import CalendarPage from "../pages/CalendarPage";
 import FamilyPage from "../pages/FamilyPage";
 import ServicePage from "../pages/ServicePage";
 import ProfilePage from "../pages/ProfilePage";
+import SavedPlacesPage from "../pages/SavedPlacesPage";
 import ProviderDashboard from "../pages/provider/ProviderDashboard";
 import TestPage from "../pages/TestPage";
 
@@ -61,6 +62,10 @@ export const router = createBrowserRouter([
       {
         path: "profile",
         element: <ProfilePage />,
+      },
+      {
+        path: "profile/saved-places",
+        element: <SavedPlacesPage />,
       },
     ],
   },

@@ -47,7 +47,7 @@ interface DailyLogState {
   getLogsByPetAndDate: (petId: string, date: string) => DailyLogSummary;
   getLogsByPet: (petId: string) => DailyLogSummary;
   getRecentLogs: (days: number) => DailyLogSummary;
-
+  
   // 통계 함수
   getTotalWalkDistance: (petId: string, month?: string) => number;
   getTotalExpense: (petId: string, month?: string) => number;
@@ -138,7 +138,9 @@ export const useDailyLogStore = create<DailyLogState>()(
 
       updateWalkLog: (id, log) => {
         set((state) => ({
-          walks: state.walks.map((w) => (w.id === id ? { ...w, ...log } : w)),
+          walks: state.walks.map((w) =>
+            w.id === id ? { ...w, ...log } : w
+          ),
         }));
       },
 
@@ -162,7 +164,9 @@ export const useDailyLogStore = create<DailyLogState>()(
 
       updateMealLog: (id, log) => {
         set((state) => ({
-          meals: state.meals.map((m) => (m.id === id ? { ...m, ...log } : m)),
+          meals: state.meals.map((m) =>
+            m.id === id ? { ...m, ...log } : m
+          ),
         }));
       },
 
@@ -186,7 +190,9 @@ export const useDailyLogStore = create<DailyLogState>()(
 
       updateBowelLog: (id, log) => {
         set((state) => ({
-          bowels: state.bowels.map((b) => (b.id === id ? { ...b, ...log } : b)),
+          bowels: state.bowels.map((b) =>
+            b.id === id ? { ...b, ...log } : b
+          ),
         }));
       },
 
@@ -211,7 +217,7 @@ export const useDailyLogStore = create<DailyLogState>()(
       updateWeightLog: (id, log) => {
         set((state) => ({
           weights: state.weights.map((w) =>
-            w.id === id ? { ...w, ...log } : w,
+            w.id === id ? { ...w, ...log } : w
           ),
         }));
       },
@@ -237,7 +243,7 @@ export const useDailyLogStore = create<DailyLogState>()(
       updateExpenseLog: (id, log) => {
         set((state) => ({
           expenses: state.expenses.map((e) =>
-            e.id === id ? { ...e, ...log } : e,
+            e.id === id ? { ...e, ...log } : e
           ),
         }));
       },
@@ -267,21 +273,11 @@ export const useDailyLogStore = create<DailyLogState>()(
         const state = get();
         return {
           date,
-          walks: state.walks.filter(
-            (w) => w.petId === petId && w.date === date,
-          ),
-          meals: state.meals.filter(
-            (m) => m.petId === petId && m.date === date,
-          ),
-          bowels: state.bowels.filter(
-            (b) => b.petId === petId && b.date === date,
-          ),
-          weights: state.weights.filter(
-            (w) => w.petId === petId && w.date === date,
-          ),
-          expenses: state.expenses.filter(
-            (e) => e.petId === petId && e.date === date,
-          ),
+          walks: state.walks.filter((w) => w.petId === petId && w.date === date),
+          meals: state.meals.filter((m) => m.petId === petId && m.date === date),
+          bowels: state.bowels.filter((b) => b.petId === petId && b.date === date),
+          weights: state.weights.filter((w) => w.petId === petId && w.date === date),
+          expenses: state.expenses.filter((e) => e.petId === petId && e.date === date),
         };
       },
 
@@ -324,7 +320,7 @@ export const useDailyLogStore = create<DailyLogState>()(
       getTotalWalkDistance: (petId, month) => {
         const state = get();
         let walks = state.walks.filter((w) => w.petId === petId);
-
+        
         if (month) {
           walks = walks.filter((w) => w.date.startsWith(month));
         }
@@ -332,8 +328,9 @@ export const useDailyLogStore = create<DailyLogState>()(
         return walks.reduce((total, walk) => {
           if (!walk.distance) return total;
           // km로 통일
-          const distanceInKm =
-            walk.distanceUnit === "m" ? walk.distance / 1000 : walk.distance;
+          const distanceInKm = walk.distanceUnit === "m" 
+            ? walk.distance / 1000 
+            : walk.distance;
           return total + distanceInKm;
         }, 0);
       },
@@ -341,7 +338,7 @@ export const useDailyLogStore = create<DailyLogState>()(
       getTotalExpense: (petId, month) => {
         const state = get();
         let expenses = state.expenses.filter((e) => e.petId === petId);
-
+        
         if (month) {
           expenses = expenses.filter((e) => e.date.startsWith(month));
         }
@@ -353,13 +350,11 @@ export const useDailyLogStore = create<DailyLogState>()(
         const state = get();
         return state.weights
           .filter((w) => w.petId === petId)
-          .sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-          );
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       },
     }),
     {
       name: "daily-log-storage",
-    },
-  ),
+    }
+  )
 );

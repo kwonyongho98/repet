@@ -18,14 +18,14 @@ export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 export type FoodType = "dry" | "wet" | "cooked" | "treat" | "other";
 
 // 지출 카테고리
-export type ExpenseCategory =
-  | "food" // 사료/간식
-  | "medical" // 병원/의료
-  | "grooming" // 미용
-  | "supplies" // 용품
-  | "training" // 훈련
-  | "hotel" // 호텔/위탁
-  | "other"; // 기타
+export type ExpenseCategory = 
+  | "food"      // 사료/간식
+  | "medical"   // 병원/의료
+  | "grooming"  // 미용
+  | "supplies"  // 용품
+  | "training"  // 훈련
+  | "hotel"     // 호텔/위탁
+  | "other";    // 기타
 
 // ============================================
 // 산책 기록
@@ -131,10 +131,24 @@ export const satisfactionLabels: Record<Satisfaction, string> = {
   bad: "나쁨 😟",
 };
 
+// 귀여운 만족도 라벨
+export const cuteSatisfactionLabels: Record<Satisfaction, string> = {
+  good: "신났어요! 🐕",
+  normal: "그냥저냥~ 😶",
+  bad: "별로였어요 😢",
+};
+
 export const bowelConditionLabels: Record<BowelCondition, string> = {
   good: "양호",
   loose: "묽음",
   hard: "딱딱함",
+};
+
+// 귀여운 배변 상태 라벨
+export const cuteBowelConditionLabels: Record<BowelCondition, string> = {
+  good: "완벽해요! 💩✨",
+  loose: "물렁물렁 💧",
+  hard: "단단해요 🪨",
 };
 
 export const bowelTypeLabels: Record<BowelType, string> = {
@@ -143,11 +157,26 @@ export const bowelTypeLabels: Record<BowelType, string> = {
   both: "소변+대변",
 };
 
+// 귀여운 배변 타입 라벨
+export const cuteBowelTypeLabels: Record<BowelType, string> = {
+  urine: "쉬야 💦",
+  feces: "응가 💩",
+  both: "쉬야+응가 🎉",
+};
+
 export const mealTypeLabels: Record<MealType, string> = {
   breakfast: "아침",
   lunch: "점심",
   dinner: "저녁",
   snack: "간식",
+};
+
+// 귀여운 식사 타입 라벨
+export const cuteMealTypeLabels: Record<MealType, string> = {
+  breakfast: "아침 냠냠 🌅",
+  lunch: "점심 냠냠 ☀️",
+  dinner: "저녁 냠냠 🌙",
+  snack: "간식 타임 🍪",
 };
 
 export const foodTypeLabels: Record<FoodType, string> = {
@@ -158,6 +187,15 @@ export const foodTypeLabels: Record<FoodType, string> = {
   other: "기타",
 };
 
+// 귀여운 사료 타입 라벨
+export const cuteFoodTypeLabels: Record<FoodType, string> = {
+  dry: "바삭바삭 사료 🥣",
+  wet: "촉촉한 사료 🥫",
+  cooked: "정성 가득 화식 🍳",
+  treat: "맛있는 간식 🦴",
+  other: "기타 음식 🍽️",
+};
+
 export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
   food: "사료/간식",
   medical: "병원/의료",
@@ -166,6 +204,17 @@ export const expenseCategoryLabels: Record<ExpenseCategory, string> = {
   training: "훈련",
   hotel: "호텔/위탁",
   other: "기타",
+};
+
+// 귀여운 지출 카테고리 라벨
+export const cuteExpenseCategoryLabels: Record<ExpenseCategory, string> = {
+  food: "간식 방어 🍖",
+  medical: "병원행 🏥",
+  grooming: "미용실 ✂️",
+  supplies: "쇼핑 타임 🛍️",
+  training: "교육비 📚",
+  hotel: "호캉스 🏨",
+  other: "기타 📦",
 };
 
 export const expenseCategoryIcons: Record<ExpenseCategory, string> = {

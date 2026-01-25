@@ -1,36 +1,53 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-  Card,
-  Button,
-  Badge,
-  Modal,
-  Input,
-  Select,
-} from "../components/common";
+  Search,
+  X,
+  List,
+  Map as MapIcon,
+  RefreshCw,
+  Scissors,
+  Stethoscope,
+  Hotel,
+  GraduationCap,
+  MapPin,
+  Star,
+  Navigation,
+  ChevronLeft,
+  Heart,
+  Phone,
+  Clock,
+  Calendar,
+} from "lucide-react";
 import { useServiceStore } from "../stores/useServiceStore";
 import { useCalendarStore } from "../stores/useCalendarStore";
 import { usePetStore } from "../stores/usePetStore";
-import type {
-  ServiceProvider,
-  ServiceType,
-  PetInfoSnapshot,
-} from "../types/service";
-import type { EventType } from "../types/calendar";
-import {
-  Hotel,
-  GraduationCap,
-  Scissors,
-  Stethoscope,
-  Search,
-  Calendar,
-  MapPin,
-  Phone,
-  Clock,
-  Star,
-  X,
-} from "lucide-react";
+import { usePlaceStore } from "../stores/usePlaceStore";
+import type { ServiceProvider, ServiceType } from "../types/service";
+import ServiceCard from "../components/service/ServiceCard";
+import { Button, Modal, Input, Select, Badge } from "../components/common";
 import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+
+// ============================================
+// Types & Constants
+// ============================================
+type ViewMode = "map" | "list";
+type CategoryFilter = "all" | ServiceType;
+
+interface MapMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  type: ServiceType;
+  provider: ServiceProvider;
+}
+
+const categories: { id: CategoryFilter; label: string; icon: React.ReactNode; emoji: string }[] = [
+  { id: "all", label: "전체", icon: <MapIcon size={16} />, emoji: "🗺️" },
+  { id: "hospital", label: "병원", icon: <Stethoscope size={16} />, emoji: "🏥" },
+  { id: "grooming", label: "미용", icon: <Scissors size={16} />, emoji: "✂️" },
+  { id: "hotel", label: "호텔", icon: <Hotel size={16} />, emoji: "🏨" },
+  { id: "training", label: "훈련", icon: <GraduationCap size={16} />, emoji: "🎓" },
+];
 
 const serviceTypeLabels: Record<ServiceType, string> = {
   hotel: "애견 호텔",
@@ -39,533 +56,554 @@ const serviceTypeLabels: Record<ServiceType, string> = {
   hospital: "동물병원",
 };
 
-const serviceTypeIcons: Record<ServiceType, React.ReactNode> = {
-  hotel: <Hotel size={20} />,
-  training: <GraduationCap size={20} />,
-  grooming: <Scissors size={20} />,
-  hospital: <Stethoscope size={20} />,
-};
+// 더미 좌표 (서울 중심)
+const SEOUL_CENTER = { lat: 37.5665, lng: 126.978 };
 
-export default function ServicePage() {
-  const getProvidersByType = useServiceStore(
-    (state) => state.getProvidersByType,
-  );
-  const createBooking = useServiceStore((state) => state.createBooking);
-  const cancelBooking = useServiceStore((state) => state.cancelBooking);
-  const getUpcomingBookings = useServiceStore(
-    (state) => state.getUpcomingBookings,
-  );
+const generateDummyCoordinates = (index: number) => ({
+  lat: SEOUL_CENTER.lat + (Math.random() - 0.5) * 0.05,
+  lng: SEOUL_CENTER.lng + (Math.random() - 0.5) * 0.05,
+});
 
-  // Calendar Store 연동
-  const addCalendarEvent = useCalendarStore((state) => state.addEvent);
-
-  const pets = usePetStore((state) => state.pets);
-
-  const [selectedType, setSelectedType] = useState<ServiceType>("hotel");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProvider, setSelectedProvider] =
-    useState<ServiceProvider | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [showMyBookings, setShowMyBookings] = useState(false);
-
-  // 예약 폼 상태
-  const [bookingForm, setBookingForm] = useState({
-    petId: "",
-    serviceName: "",
-    startDate: "",
-    endDate: "",
-    notes: "",
-  });
-
-  // 필터링된 업체 목록
-  const filteredProviders = useMemo(() => {
-    let result = getProvidersByType(selectedType);
-    if (searchQuery) {
-      result = result.filter(
-        (provider) =>
-          provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          provider.address.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
+// ============================================
+// Map Marker Component (Custom Pin)
+// ============================================
+const MapMarkerPin = ({ 
+  type, 
+  isSelected, 
+  onClick 
+}: { 
+  type: ServiceType; 
+  isSelected: boolean;
+  onClick: () => void;
+}) => {
+  const getMarkerStyle = () => {
+    const baseStyle = `
+      w-10 h-10 rounded-2xl flex items-center justify-center 
+      shadow-lg cursor-pointer transition-all duration-200
+      ${isSelected ? "scale-125 ring-2 ring-orange-500 ring-offset-2" : "hover:scale-110"}
+    `;
+    
+    switch (type) {
+      case "grooming": return `${baseStyle} bg-pink-500 text-white`;
+      case "hospital": return `${baseStyle} bg-red-500 text-white`;
+      case "hotel": return `${baseStyle} bg-blue-500 text-white`;
+      case "training": return `${baseStyle} bg-green-500 text-white`;
     }
-    return result;
-  }, [selectedType, searchQuery, getProvidersByType]);
-
-  const upcomingBookings = getUpcomingBookings();
-
-  // 함수들
-  const openProviderDetail = (provider: ServiceProvider) => {
-    setSelectedProvider(provider);
-    setIsDetailModalOpen(true);
   };
 
-  const openBookingModal = (provider: ServiceProvider) => {
-    setSelectedProvider(provider);
-    setBookingForm({
-      petId: pets[0]?.id || "",
-      serviceName: provider.services[0] || "",
-      startDate: "",
-      endDate: "",
-      notes: "",
-    });
-    setIsBookingModalOpen(true);
-  };
-
-  const handleCreateBooking = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    console.log("1. 예약 시작");
-    console.log("2. selectedProvider:", selectedProvider);
-    console.log("3. bookingForm:", bookingForm);
-
-    if (!selectedProvider || !bookingForm.petId) {
-      console.log("4. 검증 실패");
-      alert("업체 또는 반려견을 선택해주세요.");
-      return;
-    }
-
-    const pet = pets.find((p) => p.id === bookingForm.petId);
-    console.log("5. 찾은 pet:", pet);
-
-    if (!pet) {
-      alert("반려견 정보를 찾을 수 없습니다.");
-      return;
-    }
-
-    const bookingData = {
-      providerId: selectedProvider.id,
-      providerName: selectedProvider.name,
-      serviceType: selectedProvider.type,
-      petId: bookingForm.petId,
-      petName: pet.name,
-      serviceName: bookingForm.serviceName,
-      startDate: bookingForm.startDate,
-      endDate: bookingForm.endDate,
-      status: "pending" as const,
-      price: 0,
-      notes: bookingForm.notes,
-      // 3단계: 펫 상세 정보 스냅샷 추가
-      petInfo: {
-        id: pet.id,
-        name: pet.name,
-        species: pet.species,
-        breed: pet.breed,
-        age: pet.age,
-        gender: pet.gender,
-        weight: pet.weight,
-        allergies: pet.allergies,
-        vaccinationHistory: pet.vaccinationHistory,
-        notes: pet.notes,
-      } as PetInfoSnapshot,
-    };
-
-    console.log("6. 예약 데이터:", bookingData);
-
-    // 예약 생성
-    const createdBooking = createBooking(bookingData);
-
-    // ServiceType → EventType 매핑
-    const serviceTypeToEventType: Record<ServiceType, EventType> = {
-      hotel: "hotel",
-      training: "training",
-      grooming: "grooming",
-      hospital: "hospital",
-    };
-
-    // 캘린더 이벤트 생성
-    const startDateTime = new Date(bookingForm.startDate);
-    startDateTime.setHours(10, 0, 0, 0); // 기본 시작 시간 10:00
-
-    const endDateTime = bookingForm.endDate
-      ? new Date(bookingForm.endDate)
-      : new Date(bookingForm.startDate);
-    endDateTime.setHours(18, 0, 0, 0); // 기본 종료 시간 18:00
-
-    addCalendarEvent({
-      title: `${pet.name} ${bookingForm.serviceName}`,
-      start: startDateTime,
-      end: endDateTime,
-      type: serviceTypeToEventType[selectedProvider.type],
-      petId: pet.id,
-      petName: pet.name,
-      description:
-        bookingForm.notes ||
-        `${selectedProvider.name}에서 ${bookingForm.serviceName}`,
-      location: selectedProvider.address,
-      serviceProvider: selectedProvider.name,
-      bookingId: createdBooking.id,
-    });
-
-    console.log("7. 예약 및 캘린더 이벤트 생성 완료");
-    console.log("8. 전체 예약 목록:", getUpcomingBookings());
-
-    setIsBookingModalOpen(false);
-    setSelectedProvider(null);
-    setBookingForm({
-      petId: "",
-      serviceName: "",
-      startDate: "",
-      endDate: "",
-      notes: "",
-    });
-    setShowMyBookings(true);
-    alert("예약이 신청되었습니다! 캘린더에도 일정이 추가되었습니다.");
-  };
-
-  const handleCancelBooking = (bookingId: string) => {
-    if (confirm("정말 예약을 취소하시겠습니까?")) {
-      cancelBooking(bookingId);
+  const getIcon = () => {
+    switch (type) {
+      case "grooming": return <Scissors size={18} />;
+      case "hospital": return <Stethoscope size={18} />;
+      case "hotel": return <Hotel size={18} />;
+      case "training": return <GraduationCap size={18} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* 1. 상단 히어로 섹션 (배경색 적용) */}
-      <div className="bg-orange-50 px-4 pt-8 pb-12 rounded-b-3xl mb-6 shadow-sm">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-blue-900 mb-2">
-                어떤 서비스가
-                <br />
-                필요하신가요? 🐕
-              </h1>
-              <p className="text-gray-600 text-sm">
-                내 주변 검증된 전문가들을 찾아보세요.
-              </p>
-            </div>
-            {/* 내 예약 버튼 */}
-            <button
-              onClick={() => setShowMyBookings(!showMyBookings)}
-              className="flex flex-col items-center justify-center bg-white p-3 rounded-xl shadow-sm border border-orange-100 hover:bg-orange-50 transition-colors"
-            >
-              <Calendar size={24} className="text-orange-500 mb-1" />
-              <span className="text-xs font-bold text-blue-900">내 예약</span>
-              {upcomingBookings.length > 0 && (
-                <span className="absolute top-6 right-4 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-              )}
-            </button>
-          </div>
+    <button className={getMarkerStyle()} onClick={onClick}>
+      {getIcon()}
+    </button>
+  );
+};
 
-          {/* 검색창 */}
-          <div className="relative shadow-lg rounded-2xl">
-            <Search
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder="업체명, 지역(예: 강남구) 검색"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
-            />
-          </div>
+// ============================================
+// Main Component
+// ============================================
+export default function ServicePage() {
+  // Stores
+  const providers = useServiceStore((state) => state.providers);
+  const createBooking = useServiceStore((state) => state.createBooking);
+  const addCalendarEvent = useCalendarStore((state) => state.addEvent);
+  const pets = usePetStore((state) => state.pets);
+  const selectedPetId = usePetStore((state) => state.selectedPetId);
+  const selectedPet = pets.find(p => p.id === selectedPetId);
+
+  // State
+  const [viewMode, setViewMode] = useState<ViewMode>("map");
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState(SEOUL_CENTER);
+
+  // Booking Form
+  const [bookingForm, setBookingForm] = useState({
+    petId: selectedPetId || "",
+    serviceName: "",
+    startDate: format(new Date(), "yyyy-MM-dd"),
+    startTime: "10:00",
+    notes: "",
+  });
+
+  // Filter providers
+  const filteredProviders = useMemo(() => {
+    let result = providers;
+    
+    if (activeCategory !== "all") {
+      result = result.filter(p => p.type === activeCategory);
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.address.toLowerCase().includes(query) ||
+        p.services.some(s => s.toLowerCase().includes(query))
+      );
+    }
+    
+    return result;
+  }, [providers, activeCategory, searchQuery]);
+
+  // Generate markers with coordinates
+  const markers: MapMarker[] = useMemo(() => {
+    return filteredProviders.map((provider, idx) => ({
+      id: provider.id,
+      ...generateDummyCoordinates(idx),
+      type: provider.type,
+      provider,
+    }));
+  }, [filteredProviders]);
+
+  // Handle booking
+  const handleBooking = () => {
+    if (!selectedProvider || !bookingForm.petId || !bookingForm.serviceName) return;
+
+    const pet = pets.find(p => p.id === bookingForm.petId);
+    if (!pet) return;
+
+    const startDateTime = new Date(`${bookingForm.startDate}T${bookingForm.startTime}`);
+    const endDateTime = new Date(startDateTime);
+    endDateTime.setHours(endDateTime.getHours() + 1);
+
+    // Create booking
+    createBooking({
+      providerId: selectedProvider.id,
+      providerName: selectedProvider.name,
+      petId: pet.id,
+      petName: pet.name,
+      petInfo: {
+        id: pet.id,
+        name: pet.name,
+        species: pet.species,
+        breed: pet.breed || "",
+        age: pet.birthDate ? Math.floor((Date.now() - new Date(pet.birthDate).getTime()) / 31536000000) : 0,
+        gender: pet.gender,
+        weight: pet.weight || 0,
+        allergies: pet.allergies || [],
+      },
+      serviceType: selectedProvider.type,
+      serviceName: bookingForm.serviceName,
+      startDate: bookingForm.startDate,
+      endDate: bookingForm.startDate,
+      status: "confirmed",
+      totalPrice: 50000,
+      notes: bookingForm.notes,
+    });
+
+    // Add to calendar
+    addCalendarEvent({
+      title: `${selectedProvider.name} - ${bookingForm.serviceName}`,
+      start: startDateTime,
+      end: endDateTime,
+      type: selectedProvider.type === "hospital" ? "health" : selectedProvider.type,
+      petId: pet.id,
+      petName: pet.name,
+      location: selectedProvider.address,
+      serviceProvider: selectedProvider.name,
+    });
+
+    setIsBookingOpen(false);
+    setIsDetailOpen(false);
+    setBookingForm({
+      petId: selectedPetId || "",
+      serviceName: "",
+      startDate: format(new Date(), "yyyy-MM-dd"),
+      startTime: "10:00",
+      notes: "",
+    });
+  };
+
+  // Place Store
+  const addRecent = usePlaceStore((state) => state.addRecent);
+  const toggleSave = usePlaceStore((state) => state.toggleSave);
+  const isSaved = usePlaceStore((state) => state.isSaved);
+
+  // Open detail (최근 본 장소에 추가)
+  const handleMarkerClick = (provider: ServiceProvider) => {
+    addRecent(provider); // 최근 본 장소에 추가
+    setSelectedProvider(provider);
+    setIsDetailOpen(true);
+  };
+
+  return (
+    <div className="h-full flex flex-col relative" style={{ height: "calc(100vh - 64px - 64px)" }}>
+      {/* ============================================ */}
+      {/* Floating Search Header */}
+      {/* ============================================ */}
+      <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-4">
+        {/* Search Bar */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 flex items-center px-4 py-3 gap-3">
+          <Search size={20} className="text-gray-400 dark:text-gray-500" />
+          <input
+            type="text"
+            placeholder="장소, 서비스 검색..."
+            className="flex-1 outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")}>
+              <X size={18} className="text-gray-400 dark:text-gray-500" />
+            </button>
+          )}
+        </div>
+
+        {/* Category Chips */}
+        <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`
+                flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium
+                whitespace-nowrap transition-all border
+                ${activeCategory === cat.id 
+                  ? "bg-orange-500 dark:bg-orange-400 text-white border-orange-500 dark:border-orange-400 shadow-md" 
+                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-600 hover:border-orange-300 dark:hover:border-orange-400"
+                }
+              `}
+            >
+              <span className="text-base">{cat.emoji}</span>
+              {cat.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 space-y-6">
-        {/* 2. 내 예약 목록 (토글됨) */}
-        {showMyBookings && (
-          <div className="animate-fade-in-down mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-bold text-blue-900">내 예약 현황</h2>
-              <button
-                onClick={() => setShowMyBookings(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
+      {/* ============================================ */}
+      {/* Map View */}
+      {/* ============================================ */}
+      {viewMode === "map" && (
+        <div className="flex-1 bg-gray-100 relative">
+          {/* Mock Map Background */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: `
+                linear-gradient(90deg, #e5e5e5 1px, transparent 1px),
+                linear-gradient(180deg, #e5e5e5 1px, transparent 1px),
+                linear-gradient(90deg, #f0f0f0 1px, transparent 1px),
+                linear-gradient(180deg, #f0f0f0 1px, transparent 1px)
+              `,
+              backgroundSize: "100px 100px, 100px 100px, 20px 20px, 20px 20px",
+              backgroundColor: "#f8f8f8",
+            }}
+          />
+
+          {/* Map Markers */}
+          <div className="absolute inset-0 pt-32">
+            {markers.map((marker, idx) => {
+              const top = 20 + (idx % 4) * 25;
+              const left = 10 + (idx % 5) * 18;
+              
+              return (
+                <div
+                  key={marker.id}
+                  className="absolute transition-all duration-300"
+                  style={{ 
+                    top: `${top}%`, 
+                    left: `${left}%`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <MapMarkerPin
+                    type={marker.type}
+                    isSelected={selectedProvider?.id === marker.id}
+                    onClick={() => handleMarkerClick(marker.provider)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Re-search Button */}
+          <button className="absolute top-36 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">
+            <RefreshCw size={16} />
+            이 지역 재검색
+          </button>
+
+          {/* Current Location Button */}
+          <button className="absolute bottom-28 right-4 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all">
+            <Navigation size={20} className="text-gray-700" />
+          </button>
+        </div>
+      )}
+
+      {/* ============================================ */}
+      {/* List View */}
+      {/* ============================================ */}
+      {viewMode === "list" && (
+        <div className="flex-1 bg-gray-50 pt-32 overflow-y-auto">
+          <div className="px-4 pb-24 space-y-4">
+            {/* Results Count */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                검색 결과 <span className="font-bold text-gray-900">{filteredProviders.length}</span>개
+              </p>
+              <button className="text-sm text-orange-500 font-medium">
+                거리순
               </button>
             </div>
-            {upcomingBookings.length === 0 ? (
-              <Card className="text-center py-8 bg-white border-dashed border-2 border-gray-200">
-                <p className="text-gray-500">아직 예약된 내역이 없습니다.</p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {upcomingBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500 flex justify-between items-center"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="primary">
-                          {serviceTypeLabels[booking.serviceType]}
-                        </Badge>
-                        <span className="font-bold text-gray-800">
-                          {booking.providerName}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-1">
-                        {format(new Date(booking.startDate), "M월 d일", {
-                          locale: ko,
-                        })}{" "}
-                        · {booking.petName}
-                      </p>
-                      <span className="text-xs text-orange-600 font-medium">
-                        예약 대기중
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => handleCancelBooking(booking.id)}
-                    >
-                      취소
-                    </Button>
-                  </div>
-                ))}
+
+            {/* Service Cards */}
+            {filteredProviders.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-4">🔍</div>
+                <p className="text-gray-500">검색 결과가 없어요</p>
+                <p className="text-sm text-gray-400 mt-1">다른 검색어로 시도해보세요</p>
               </div>
+            ) : (
+              filteredProviders.map((provider, idx) => (
+                <ServiceCard
+                  key={provider.id}
+                  provider={provider}
+                  distance={`${(0.5 + idx * 0.3).toFixed(1)}km`}
+                  onClick={() => handleMarkerClick(provider)}
+                />
+              ))
             )}
           </div>
-        )}
-
-        {/* 3. 카테고리 필터 (주황색으로 변경) */}
-        <div className="grid grid-cols-4 gap-2">
-          {(Object.keys(serviceTypeLabels) as ServiceType[]).map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(type)}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 border ${
-                selectedType === type
-                  ? "bg-orange-500 border-orange-500 text-white shadow-md transform scale-105"
-                  : "bg-white border-gray-100 text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              <div
-                className={`mb-1 ${selectedType === type ? "text-white" : "text-gray-400"}`}
-              >
-                {serviceTypeIcons[type]}
-              </div>
-              <span className="text-xs font-bold">
-                {serviceTypeLabels[type]}
-              </span>
-            </button>
-          ))}
         </div>
+      )}
 
-        {/* 4. 업체 목록 (이미지 중심 카드) */}
-        <h2 className="text-xl font-bold text-blue-900 mt-2">
-          추천 {serviceTypeLabels[selectedType]}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredProviders.map((provider) => (
-            <div
-              key={provider.id}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-shadow"
-            >
-              {/* 이미지 영역 (상단 꽉 채움) */}
-              <div
-                className="h-48 bg-gray-200 relative cursor-pointer"
-                onClick={() => openProviderDetail(provider)}
+      {/* ============================================ */}
+      {/* View Toggle Button */}
+      {/* ============================================ */}
+      <button
+        onClick={() => setViewMode(viewMode === "map" ? "list" : "map")}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-6 py-3 bg-orange-500 dark:bg-orange-400 text-white rounded-full shadow-lg font-medium hover:bg-orange-600 dark:hover:bg-orange-500 transition-all"
+      >
+        {viewMode === "map" ? (
+          <>
+            <List size={18} />
+            목록보기
+          </>
+        ) : (
+          <>
+            <MapIcon size={18} />
+            지도보기
+          </>
+        )}
+      </button>
+
+      {/* ============================================ */}
+      {/* Provider Detail Bottom Sheet */}
+      {/* ============================================ */}
+      {isDetailOpen && selectedProvider && (
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsDetailOpen(false)}
+          />
+          
+          {/* Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-3xl max-h-[85vh] overflow-y-auto animate-slide-up">
+            {/* Handle */}
+            <div className="sticky top-0 bg-white dark:bg-slate-800 pt-3 pb-2 z-10">
+              <div className="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full mx-auto" />
+            </div>
+
+            {/* Hero Section */}
+            <div className="relative h-48 overflow-hidden">
+              <div 
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ 
+                  backgroundColor: selectedProvider.type === "grooming" ? "#fce7f3" :
+                                   selectedProvider.type === "hospital" ? "#fee2e2" :
+                                   selectedProvider.type === "hotel" ? "#dbeafe" : "#dcfce7"
+                }}
               >
-                {provider.images.length > 0 ? (
-                  <img
-                    src={provider.images[0]}
-                    alt={provider.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-orange-100 text-orange-400">
-                    <span className="text-4xl font-bold">
-                      {provider.name[0]}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-blue-900 flex items-center gap-1">
-                  <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                  {provider.rating}
+                <span className="text-7xl opacity-30">
+                  {selectedProvider.type === "grooming" && "✂️"}
+                  {selectedProvider.type === "hospital" && "🏥"}
+                  {selectedProvider.type === "hotel" && "🏨"}
+                  {selectedProvider.type === "training" && "🎓"}
+                </span>
+              </div>
+              
+              {/* Close Button */}
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="absolute top-4 left-4 w-9 h-9 bg-white/90 dark:bg-slate-800/90 rounded-full flex items-center justify-center shadow"
+              >
+                <ChevronLeft size={20} className="text-gray-700 dark:text-gray-200" />
+              </button>
+              
+              {/* Favorite Button */}
+              <button 
+                onClick={() => toggleSave(selectedProvider.id)}
+                className="absolute top-4 right-4 w-9 h-9 bg-white/90 dark:bg-slate-800/90 rounded-full flex items-center justify-center shadow"
+              >
+                <Heart 
+                  size={20} 
+                  className={isSaved(selectedProvider.id) 
+                    ? "text-red-500 fill-red-500" 
+                    : "text-gray-600 dark:text-gray-300"
+                  } 
+                />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-5 py-4">
+              {/* Title */}
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <Badge variant="primary" className="mb-2">
+                    {serviceTypeLabels[selectedProvider.type]}
+                  </Badge>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {selectedProvider.name}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                  <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                  <span className="font-bold text-gray-900">{selectedProvider.rating.toFixed(1)}</span>
+                  <span className="text-xs text-gray-500">({selectedProvider.reviewCount})</span>
                 </div>
               </div>
 
-              {/* 정보 영역 */}
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-bold text-gray-900">
-                    {provider.name}
-                  </h3>
-                  <span className="text-orange-600 font-bold text-sm">
-                    {provider.priceRange}
-                  </span>
+              {/* Info */}
+              <div className="space-y-3 mb-5">
+                <div className="flex items-center gap-3 text-gray-600">
+                  <MapPin size={18} className="text-gray-400" />
+                  <span className="text-sm">{selectedProvider.address}</span>
                 </div>
-
-                <p className="text-gray-500 text-sm flex items-center gap-1 mb-4">
-                  <MapPin size={14} /> {provider.address}
-                </p>
-
-                {/* 버튼 영역 */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openProviderDetail(provider)}
-                    className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors"
-                  >
-                    상세보기
-                  </button>
-                  <button
-                    onClick={() => openBookingModal(provider)}
-                    className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors shadow-md"
-                  >
-                    예약하기
-                  </button>
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Phone size={18} className="text-gray-400" />
+                  <span className="text-sm">{selectedProvider.phone}</span>
                 </div>
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Clock size={18} className="text-gray-400" />
+                  <span className="text-sm">{selectedProvider.hours}</span>
+                </div>
+              </div>
+
+              {/* Services */}
+              <div className="mb-5">
+                <h3 className="font-bold text-gray-900 mb-2">제공 서비스</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProvider.services.map((service, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedProvider.description && (
+                <div className="mb-6">
+                  <h3 className="font-bold text-gray-900 mb-2">소개</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {selectedProvider.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pb-6">
+                <button className="flex-1 py-3 border-2 border-orange-500 text-orange-500 rounded-2xl font-bold hover:bg-orange-50 transition-all">
+                  <Phone size={18} className="inline mr-2" />
+                  전화하기
+                </button>
+                <button 
+                  onClick={() => {
+                    setBookingForm({ ...bookingForm, serviceName: selectedProvider.services[0] || "" });
+                    setIsBookingOpen(true);
+                  }}
+                  className="flex-1 py-3 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all"
+                >
+                  <Calendar size={18} className="inline mr-2" />
+                  예약하기
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 모달들 */}
-      <Modal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        title="예약하기"
-      >
-        <form onSubmit={handleCreateBooking} className="space-y-4">
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h3 className="font-bold text-blue-900">
-              {selectedProvider?.name}
-            </h3>
-            <p className="text-sm text-gray-500">{selectedProvider?.address}</p>
           </div>
+        </div>
+      )}
 
+      {/* ============================================ */}
+      {/* Booking Modal */}
+      {/* ============================================ */}
+      <Modal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        title={`📅 ${selectedProvider?.name} 예약`}
+      >
+        <div className="space-y-4">
           <Select
             label="반려견 선택"
             value={bookingForm.petId}
-            onChange={(e) =>
-              setBookingForm({ ...bookingForm, petId: e.target.value })
-            }
-            options={[
-              { value: "", label: "선택해주세요" },
-              ...pets.map((p) => ({ value: p.id, label: p.name })),
-            ]}
-            required
+            onChange={(e) => setBookingForm({ ...bookingForm, petId: e.target.value })}
+            options={pets.map(p => ({ value: p.id, label: p.name }))}
           />
+          
           <Select
             label="서비스 선택"
             value={bookingForm.serviceName}
-            onChange={(e) =>
-              setBookingForm({ ...bookingForm, serviceName: e.target.value })
-            }
-            options={[
-              { value: "", label: "선택해주세요" },
-              ...(selectedProvider?.services.map((s) => ({
-                value: s,
-                label: s,
-              })) || []),
-            ]}
-            required
+            onChange={(e) => setBookingForm({ ...bookingForm, serviceName: e.target.value })}
+            options={selectedProvider?.services.map(s => ({ value: s, label: s })) || []}
           />
-          <div className="grid grid-cols-2 gap-3">
+          
+          <div className="grid grid-cols-2 gap-4">
             <Input
+              label="날짜"
               type="date"
-              label="시작일"
               value={bookingForm.startDate}
-              onChange={(e) =>
-                setBookingForm({ ...bookingForm, startDate: e.target.value })
-              }
-              required
+              onChange={(e) => setBookingForm({ ...bookingForm, startDate: e.target.value })}
             />
             <Input
-              type="date"
-              label="종료일"
-              value={bookingForm.endDate}
-              onChange={(e) =>
-                setBookingForm({ ...bookingForm, endDate: e.target.value })
-              }
+              label="시간"
+              type="time"
+              value={bookingForm.startTime}
+              onChange={(e) => setBookingForm({ ...bookingForm, startTime: e.target.value })}
             />
           </div>
+
           <Input
             label="요청사항"
-            placeholder="특이사항을 입력해주세요"
+            placeholder="특별 요청사항을 입력해주세요"
             value={bookingForm.notes}
-            onChange={(e) =>
-              setBookingForm({ ...bookingForm, notes: e.target.value })
-            }
+            onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
           />
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => setIsBookingModalOpen(false)}
-            >
-              취소
-            </Button>
-            <button
-              type="submit"
-              className="flex-1 bg-orange-500 text-white font-bold py-2 rounded-lg hover:bg-orange-600"
-            >
-              예약 확정
-            </button>
-          </div>
-        </form>
+          <Button variant="primary" className="w-full rounded-2xl py-3" onClick={handleBooking}>
+            예약 확정하기
+          </Button>
+        </div>
       </Modal>
 
-      {/* 상세 모달 */}
-      <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="업체 상세"
-      >
-        {selectedProvider && (
-          <div className="space-y-4">
-            <img
-              src={selectedProvider.images[0]}
-              alt={selectedProvider.name}
-              className="w-full h-56 object-cover rounded-xl bg-gray-100"
-            />
-            <div>
-              <h2 className="text-xl font-bold text-blue-900">
-                {selectedProvider.name}
-              </h2>
-              <p className="text-gray-500 text-sm mt-1">
-                {selectedProvider.description}
-              </p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm">
-              <div className="flex gap-2">
-                <MapPin size={16} /> {selectedProvider.address}
-              </div>
-              <div className="flex gap-2">
-                <Phone size={16} /> {selectedProvider.phone}
-              </div>
-              <div className="flex gap-2">
-                <Clock size={16} /> {selectedProvider.hours}
-              </div>
-            </div>
-            <div className="pt-2">
-              <h4 className="font-bold mb-2">제공 서비스</h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedProvider.services.map((s) => (
-                  <Badge key={s} variant="info">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button
-                className="flex-1"
-                variant="outline"
-                onClick={() => setIsDetailModalOpen(false)}
-              >
-                닫기
-              </Button>
-              <button
-                className="flex-1 bg-orange-500 text-white font-bold rounded-lg"
-                onClick={() => {
-                  setIsDetailModalOpen(false);
-                  openBookingModal(selectedProvider);
-                }}
-              >
-                예약하기
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Styles */}
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes slide-up {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

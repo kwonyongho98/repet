@@ -1,17 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Home, Calendar, Store, User, Menu } from "lucide-react";
-import Sidebar from "./Sidebar";
+import { Home, Calendar, MapPin, User, Bell, Menu } from "lucide-react";
+import SideDrawer from "./SideDrawer";
+import { useThemeStore } from "../../stores/useThemeStore";
 
 export default function Layout() {
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  
+  // Theme Store - 초기 상태 복원
+  const isDarkMode = useThemeStore((state) => state.isDarkMode);
+  
+  // 다크 모드 클래스 초기 적용
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkMode]);
 
   const navItems = [
-    { path: "/home", icon: Home, label: "홈" },
-    { path: "/home/calendar", icon: Calendar, label: "캘린더" },
-    { path: "/home/service", icon: Store, label: "서비스" },
-    { path: "/home/profile", icon: User, label: "프로필" },
+    { path: "/home", icon: Home, label: "홈", emoji: "🏠" },
+    { path: "/home/calendar", icon: Calendar, label: "일기장", emoji: "📖" },
+    { path: "/home/service", icon: MapPin, label: "서비스", emoji: "🏥" },
+    { path: "/home/profile", icon: User, label: "마이", emoji: "👤" },
   ];
 
   const isActive = (path: string) => {
@@ -22,127 +35,99 @@ export default function Layout() {
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: "var(--color-background)" }}
-    >
-      {/* 헤더 */}
-      <header
-        className="sticky top-0 z-30 bg-white shadow-sm"
-        style={{ borderBottom: "1px solid var(--color-primary-200)" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          {/* 좌측: 햄버거 메뉴 + 로고 */}
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col transition-colors duration-300">
+      {/* ============================================ */}
+      {/* Top Header Bar */}
+      {/* ============================================ */}
+      <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 shadow-sm transition-colors duration-300">
+        <div className="h-14 px-4 flex items-center justify-between">
+          {/* Left: Menu + Logo */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="메뉴 열기"
+              onClick={() => setIsDrawerOpen(true)}
+              className="p-2 -ml-2 rounded-full hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors"
             >
-              <Menu size={24} style={{ color: "var(--color-secondary-900)" }} />
+              <Menu size={22} className="text-gray-600 dark:text-gray-300" />
             </button>
-
             <Link to="/home" className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-                style={{ backgroundColor: "var(--color-primary)" }}
-              >
-                R
-              </div>
-              <span
-                className="text-xl font-bold"
-                style={{ color: "var(--color-primary)" }}
-              >
+              <span className="text-2xl">🐕</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 dark:from-orange-400 dark:to-pink-400 bg-clip-text text-transparent">
                 Repet
               </span>
             </Link>
           </div>
 
-          {/* 우측: 데스크톱 네비게이션 */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
-
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors"
-                  style={{
-                    color: active
-                      ? "var(--color-primary)"
-                      : "var(--color-secondary-900)",
-                    backgroundColor: active
-                      ? "var(--color-primary-50)"
-                      : "transparent",
-                  }}
-                >
-                  <Icon size={20} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Right: Notification Bell */}
+          <button
+            className="p-2 rounded-full hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors relative"
+            onClick={() => console.log("Notification clicked")}
+          >
+            <Bell size={24} className="text-gray-600 dark:text-gray-300" />
+            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-800" />
+          </button>
         </div>
       </header>
 
-      {/* 메인 콘텐츠 */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      {/* ============================================ */}
+      {/* Main Content Area */}
+      {/* ============================================ */}
+      <main className="flex-1 pb-20 overflow-y-auto">
         <Outlet />
       </main>
 
-      {/* 모바일 하단 네비게이션 */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg z-30"
-        style={{ borderTop: "1px solid var(--color-primary-200)" }}
-      >
-        <div className="flex items-center justify-around h-16">
+      {/* ============================================ */}
+      {/* Bottom Navigation Bar (Cute Version) */}
+      {/* ============================================ */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 z-30 safe-area-bottom transition-colors duration-300">
+        <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
           {navItems.map((item) => {
-            const Icon = item.icon;
             const active = isActive(item.path);
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex flex-col items-center justify-center flex-1 h-full"
+                className="flex flex-col items-center justify-center flex-1 h-full py-1 transition-all"
               >
-                <Icon
-                  size={24}
-                  style={{
-                    color: active
-                      ? "var(--color-primary)"
-                      : "var(--color-text-secondary)",
-                  }}
-                />
+                <div
+                  className={`text-2xl transition-transform duration-200 ${
+                    active ? "scale-110" : "grayscale opacity-60"
+                  }`}
+                >
+                  {item.emoji}
+                </div>
                 <span
-                  className="text-xs mt-1 font-medium"
-                  style={{
-                    color: active
-                      ? "var(--color-primary)"
-                      : "var(--color-text-secondary)",
-                  }}
+                  className={`text-xs mt-0.5 font-medium transition-colors ${
+                    active 
+                      ? "text-orange-500 dark:text-orange-400" 
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
                 >
                   {item.label}
                 </span>
+                {active && (
+                  <div className="w-1 h-1 rounded-full bg-orange-500 dark:bg-orange-400 mt-0.5" />
+                )}
               </Link>
             );
           })}
         </div>
       </nav>
 
-      {/* 사이드바 */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        onOpenPetModal={() => {
-          setIsSidebarOpen(false);
-        }}
-        onOpenFamilyModal={() => {
-          setIsSidebarOpen(false);
-        }}
+      {/* ============================================ */}
+      {/* Side Drawer */}
+      {/* ============================================ */}
+      <SideDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
       />
+
+      {/* Safe area for iOS */}
+      <style>{`
+        .safe-area-bottom {
+          padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+      `}</style>
     </div>
   );
 }

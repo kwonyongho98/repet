@@ -13,11 +13,9 @@ interface FamilyBoardState {
   toggleTodo: (id: string, completedBy: string) => void;
   updateTodo: (id: string, todo: Partial<TodoItem>) => void;
   deleteTodo: (id: string) => void;
-
+  
   // 메모 관련
-  addNote: (
-    note: Omit<PinnedNote, "id" | "createdAt" | "updatedAt" | "isPinned">,
-  ) => void;
+  addNote: (note: Omit<PinnedNote, "id" | "createdAt" | "updatedAt" | "isPinned">) => void;
   updateNote: (id: string, note: Partial<PinnedNote>) => void;
   deleteNote: (id: string) => void;
   togglePinNote: (id: string) => void;
@@ -59,9 +57,7 @@ export const useFamilyBoardStore = create<FamilyBoardState>()(
           isCompleted: false,
           createdBy: "아빠",
           createdAt: new Date().toISOString(),
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
           petId: "2",
           petName: "뭉치",
         },
@@ -112,11 +108,9 @@ export const useFamilyBoardStore = create<FamilyBoardState>()(
                   ...todo,
                   isCompleted: !todo.isCompleted,
                   completedBy: !todo.isCompleted ? completedBy : undefined,
-                  completedAt: !todo.isCompleted
-                    ? new Date().toISOString()
-                    : undefined,
+                  completedAt: !todo.isCompleted ? new Date().toISOString() : undefined,
                 }
-              : todo,
+              : todo
           ),
         }));
       },
@@ -124,7 +118,7 @@ export const useFamilyBoardStore = create<FamilyBoardState>()(
       updateTodo: (id, todoUpdate) => {
         set((state) => ({
           todos: state.todos.map((todo) =>
-            todo.id === id ? { ...todo, ...todoUpdate } : todo,
+            todo.id === id ? { ...todo, ...todoUpdate } : todo
           ),
         }));
       },
@@ -155,7 +149,7 @@ export const useFamilyBoardStore = create<FamilyBoardState>()(
           notes: state.notes.map((note) =>
             note.id === id
               ? { ...note, ...noteUpdate, updatedAt: new Date().toISOString() }
-              : note,
+              : note
           ),
         }));
       },
@@ -169,7 +163,7 @@ export const useFamilyBoardStore = create<FamilyBoardState>()(
       togglePinNote: (id) => {
         set((state) => ({
           notes: state.notes.map((note) =>
-            note.id === id ? { ...note, isPinned: !note.isPinned } : note,
+            note.id === id ? { ...note, isPinned: !note.isPinned } : note
           ),
         }));
       },
@@ -199,6 +193,6 @@ export const useFamilyBoardStore = create<FamilyBoardState>()(
     }),
     {
       name: "family-board-storage",
-    },
-  ),
+    }
+  )
 );

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4 Dark Mode Configuration */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Repet 브랜드 CSS 변수 */
 :root {
   /* Primary (주황) */
@@ -26,6 +29,28 @@
   --color-text-secondary: #64748b;
 }
 
+/* Dark Mode 변수 */
+.dark {
+  --color-primary: #fb923c;
+  --color-primary-50: #431407;
+  --color-primary-100: #7c2d12;
+  --color-primary-200: #9a3412;
+  --color-primary-600: #fdba74;
+  --color-primary-700: #fed7aa;
+
+  --color-secondary: #60a5fa;
+  --color-secondary-100: #1e3a8a;
+  --color-secondary-800: #93c5fd;
+  --color-secondary-900: #bfdbfe;
+  --color-secondary-950: #dbeafe;
+
+  --color-background: #0f172a;
+  --color-background-light: #1e293b;
+
+  --color-text: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+}
+
 /* Repet 브랜드 기본 스타일 */
 body {
   background-color: var(--color-background);
@@ -35,6 +60,7 @@ body {
     "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 h1,
@@ -43,6 +69,16 @@ h3,
 h4,
 h5,
 h6 {
+  color: var(--color-secondary-900);
+}
+
+/* Dark mode heading colors */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
   color: var(--color-secondary-900);
 }
 
@@ -126,6 +162,66 @@ h6 {
 .rbc-selected-cell {
   background-color: #ffedd5;
 }
+
+/* Dark mode for React Big Calendar */
+.dark .rbc-header {
+  border-bottom-color: #475569;
+  color: #93c5fd;
+}
+
+.dark .rbc-today {
+  background-color: #1e293b;
+}
+
+.dark .rbc-toolbar button {
+  border-color: #475569;
+  background: #1e293b;
+  color: #93c5fd;
+}
+
+.dark .rbc-toolbar button:hover {
+  background: #334155;
+  border-color: #fb923c;
+}
+
+.dark .rbc-toolbar button.rbc-active {
+  background: #fb923c;
+  color: #0f172a;
+  border-color: #fb923c;
+}
+
+.dark .rbc-toolbar-label {
+  color: #93c5fd;
+}
+
+.dark .rbc-off-range-bg {
+  background: #0f172a;
+}
+
+.dark .rbc-selected-cell {
+  background-color: #7c2d12;
+}
+
+.dark .rbc-calendar {
+  color: #e2e8f0;
+}
+
+.dark .rbc-month-view,
+.dark .rbc-time-view,
+.dark .rbc-agenda-view {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+.dark .rbc-day-bg,
+.dark .rbc-date-cell {
+  border-color: #334155;
+}
+
+.dark .rbc-off-range {
+  color: #64748b;
+}
+
 /* 페이드인 애니메이션 */
 @keyframes fadeIn {
   from {

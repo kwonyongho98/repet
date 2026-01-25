@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  
+  // 다크 모드: 'class' 전략 사용 (HTML에 'dark' 클래스 추가로 전환)
+  darkMode: 'class',
+  
   theme: {
     extend: {
       colors: {
@@ -35,6 +39,9 @@ export default {
         background: {
           DEFAULT: "#FFF7ED", // orange-50
           light: "#FFFBF5",
+          // 다크 모드용 배경색
+          dark: "#0f172a", // slate-900
+          "dark-light": "#1e293b", // slate-800
         },
       },
     },

@@ -4,6 +4,11 @@ import type { Pet } from "../types/pet";
 
 interface PetState {
   pets: Pet[];
+  // Global Pet Filter
+  selectedPetId: string;
+  setSelectedPetId: (id: string) => void;
+  getSelectedPet: () => Pet | undefined;
+  // CRUD
   addPet: (pet: Omit<Pet, "id" | "createdAt" | "updatedAt">) => void;
   updatePet: (id: string, pet: Partial<Pet>) => void;
   deletePet: (id: string) => void;
@@ -13,6 +18,18 @@ interface PetState {
 export const usePetStore = create<PetState>()(
   persist(
     (set, get) => ({
+      // 기본 선택: 첫 번째 펫
+      selectedPetId: "1",
+
+      setSelectedPetId: (id) => {
+        set({ selectedPetId: id });
+      },
+
+      getSelectedPet: () => {
+        const state = get();
+        return state.pets.find((pet) => pet.id === state.selectedPetId);
+      },
+
       pets: [
         {
           id: "1",
@@ -90,7 +107,14 @@ export const usePetStore = create<PetState>()(
       },
 
       deletePet: (id) => {
-        set((state) => ({ pets: state.pets.filter((pet) => pet.id !== id) }));
+        set((state) => {
+          const newPets = state.pets.filter((pet) => pet.id !== id);
+          // 삭제된 펫이 선택된 펫이면 첫 번째 펫으로 변경
+          const newSelectedId = state.selectedPetId === id 
+            ? (newPets[0]?.id || "") 
+            : state.selectedPetId;
+          return { pets: newPets, selectedPetId: newSelectedId };
+        });
       },
 
       getPetById: (id) => {
