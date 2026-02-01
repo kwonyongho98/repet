@@ -22,8 +22,8 @@ export const getPartnerConnections = async (familyId: string): Promise<PartnerCo
       *,
       service_providers (
         id,
-        name,
-        type
+        business_name,
+        service_type
       )
     `)
     .eq('family_id', familyId)
@@ -38,8 +38,8 @@ export const getPartnerConnections = async (familyId: string): Promise<PartnerCo
     id: item.id,
     familyId: item.family_id,
     providerId: item.provider_id,
-    providerName: item.service_providers?.name,
-    providerType: item.service_providers?.type,
+    providerName: item.service_providers?.business_name,
+    providerType: item.service_providers?.service_type,
     status: item.status,
     inviteCode: item.invite_code,
     permissions: item.permissions,
@@ -236,6 +236,7 @@ export const updatePartnerPermissions = async (
 
 /**
  * 알림장 목록 조회 (가족용)
+ * ✅ FIXED: service_providers.name → service_providers.business_name
  */
 export const getCareNotesByFamily = async (
   familyId: string,
@@ -246,7 +247,7 @@ export const getCareNotesByFamily = async (
     .select(`
       *,
       pets (id, name, profile_image),
-      service_providers (id, name)
+      service_providers (id, business_name)
     `)
     .eq('family_id', familyId)
     .order('date', { ascending: false });
@@ -304,6 +305,7 @@ export const getCareNotesByProvider = async (
 
 /**
  * 특정 예약의 알림장 조회
+ * ✅ FIXED: service_providers.name → service_providers.business_name
  */
 export const getCareNoteByBooking = async (
   bookingId: string,
@@ -314,7 +316,7 @@ export const getCareNoteByBooking = async (
     .select(`
       *,
       pets (id, name, profile_image),
-      service_providers (id, name)
+      service_providers (id, business_name)
     `)
     .eq('booking_id', bookingId)
     .eq('date', date)
@@ -331,6 +333,7 @@ export const getCareNoteByBooking = async (
 
 /**
  * 알림장 생성
+ * ✅ FIXED: service_providers.name → service_providers.business_name
  */
 export const createCareNote = async (
   bookingId: string,
@@ -342,13 +345,14 @@ export const createCareNote = async (
   createdBy: string
 ): Promise<CareNote> => {
   // 1. 사진 업로드
-  const photoUrls: string[] = [...formData.existingPhotos];
-  
-  for (const file of formData.photos) {
-    const path = `care-notes/${providerId}/${date}/${Date.now()}-${file.name}`;
-    const url = await uploadImage('PROVIDER_IMAGES', file, path);
-    if (url) {
-      photoUrls.push(url);
+  const photoUrls: string[] = [];
+  if (formData.photos && formData.photos.length > 0) {
+    for (const file of formData.photos) {
+      const path = `care-notes/${providerId}/${date}/${Date.now()}-${file.name}`;
+      const url = await uploadImage('PROVIDER_IMAGES', file, path);
+      if (url) {
+        photoUrls.push(url);
+      }
     }
   }
 
@@ -373,7 +377,7 @@ export const createCareNote = async (
     .select(`
       *,
       pets (id, name, profile_image),
-      service_providers (id, name)
+      service_providers (id, business_name)
     `)
     .single();
 
@@ -390,6 +394,7 @@ export const createCareNote = async (
 
 /**
  * 알림장 수정
+ * ✅ FIXED: service_providers.name → service_providers.business_name
  */
 export const updateCareNote = async (
   careNoteId: string,
@@ -432,7 +437,7 @@ export const updateCareNote = async (
     .select(`
       *,
       pets (id, name, profile_image),
-      service_providers (id, name)
+      service_providers (id, business_name)
     `)
     .single();
 
@@ -531,6 +536,7 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
 
 /**
  * Care Note 알림 전송 (내부 함수)
+ * ✅ FIXED: service_providers.name → service_providers.business_name
  */
 const sendCareNoteNotification = async (
   familyId: string,
@@ -546,10 +552,10 @@ const sendCareNoteNotification = async (
       .eq('id', petId)
       .single();
 
-    // Provider 이름 조회
+    // Provider 이름 조회 (✅ FIXED)
     const { data: provider } = await supabase
       .from('service_providers')
-      .select('name')
+      .select('business_name')
       .eq('id', providerId)
       .single();
 
@@ -566,7 +572,7 @@ const sendCareNoteNotification = async (
       user_id: member.id,
       type: 'care_note',
       title: `${pet?.name || '반려동물'}의 알림장이 도착했어요! 📝`,
-      body: `${provider?.name || '파트너'}에서 오늘의 알림장을 보내왔습니다.`,
+      body: `${provider?.business_name || '파트너'}에서 오늘의 알림장을 보내왔습니다.`,
       data: {
         careNoteId,
         petId,
@@ -587,6 +593,10 @@ const sendCareNoteNotification = async (
 // Helper Functions
 // ============================================
 
+/**
+ * DB 결과를 CareNote 타입으로 변환
+ * ✅ FIXED: service_providers.name → service_providers.business_name
+ */
 const mapCareNoteFromDB = (data: any): CareNote => ({
   id: data.id,
   bookingId: data.booking_id,
@@ -606,7 +616,7 @@ const mapCareNoteFromDB = (data: any): CareNote => ({
   updatedAt: data.updated_at,
   petName: data.pets?.name,
   petImage: data.pets?.profile_image,
-  providerName: data.service_providers?.name,
+  providerName: data.service_providers?.business_name, // ✅ FIXED
 });
 
 /**

@@ -1,7 +1,22 @@
-// Export all services for easy importing
+// ============================================
+// Services Index - API 서비스 통합 export
+// ============================================
+
+// Auth
 export * from './authService';
+
+// Pet & Family
 export * from './petService';
-export * from './dailyLogService';
-export * from './calendarService';
-export * from './serviceProviderService';
 export * from './familyBoardService';
+
+// Daily Logs
+export * from './dailyLogService';
+
+// Calendar
+export * from './calendarService';
+
+// Service Providers
+export * from './serviceProviderService';
+
+// Partner (Legacy)
+export * from './partnerService';

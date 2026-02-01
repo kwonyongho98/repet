@@ -55,8 +55,20 @@ export const AuthCallbackPage = () => {
           // Initialize the auth store with the new session
           await initialize();
 
-          // Redirect to home
-          navigate('/home', { replace: true });
+          // Check if user needs onboarding (no family_id)
+          const { data: updatedProfile } = await supabase
+            .from('profiles')
+            .select('family_id')
+            .eq('id', data.session.user.id)
+            .single();
+
+          if (!updatedProfile?.family_id) {
+            // New user - redirect to onboarding
+            navigate('/onboarding', { replace: true });
+          } else {
+            // Existing user - redirect to home
+            navigate('/home', { replace: true });
+          }
         } else {
           // No session, redirect to login
           navigate('/login', { replace: true });

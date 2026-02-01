@@ -1,6 +1,9 @@
 import type { Session } from '@supabase/supabase-js';
 
-export type UserRole = 'family' | 'provider' | 'partner';
+// ============================================
+// UserRole - SQL ENUM 기준 ('partner' 없음)
+// ============================================
+export type UserRole = 'family' | 'provider';
 export type SocialProvider = 'kakao' | 'google' | 'naver' | 'email';
 
 export interface User {
@@ -8,9 +11,10 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-  providerId?: string; // 사장님인 경우 업체 ID
+  providerId?: string;
   familyId?: string;
   avatarUrl?: string;
+  isNewUser?: boolean;
 }
 
 export interface AuthState {
@@ -18,6 +22,7 @@ export interface AuthState {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isNewUser: boolean;
   lastLoginMethod?: SocialProvider;
   
   // Actions
@@ -27,6 +32,12 @@ export interface AuthState {
   loginWithEmail: (email: string, password: string) => Promise<boolean>;
   loginWithProvider: (provider: SocialProvider) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
+  
+  // Onboarding
+  checkIsNewUser: () => Promise<boolean>;
+  completeOnboarding: (name: string, familyName?: string) => Promise<boolean>;
+  joinFamily: (inviteCode: string) => Promise<boolean>;
   
   // Legacy compatibility
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;

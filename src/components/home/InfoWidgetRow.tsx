@@ -11,8 +11,9 @@ export default function InfoWidgetRow() {
     return pets.find((p) => p.id === selectedPetId);
   });
 
-  const meals = useDailyLogStore((state) => state.meals);
-  const weights = useDailyLogStore((state) => state.weights);
+  // FIX: mealLogs, weightLogs (스토어 실제 속성명)
+  const meals = useDailyLogStore((state) => state.mealLogs);
+  const weights = useDailyLogStore((state) => state.weightLogs);
 
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -25,7 +26,7 @@ export default function InfoWidgetRow() {
   // Today's meals
   const todayMeals = useMemo(() => {
     if (!selectedPet) return [];
-    return meals.filter(
+    return (meals || []).filter(
       (m) => m.date === today && m.petId === selectedPet.id
     );
   }, [meals, today, selectedPet]);
@@ -37,7 +38,7 @@ export default function InfoWidgetRow() {
   // Latest weight
   const latestWeight = useMemo(() => {
     if (!selectedPet) return null;
-    const petWeights = weights
+    const petWeights = (weights || [])
       .filter((w) => w.petId === selectedPet.id)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return petWeights[0] || null;
@@ -58,7 +59,7 @@ export default function InfoWidgetRow() {
 
         {/* Today's Intake Widget */}
         <InfoWidget
-          emoji="🍚"
+          emoji="🚀"
           label="오늘 식사"
           value={totalIntake > 0 ? `${totalIntake}g` : "-"}
           bgColor="bg-amber-50 dark:bg-amber-900/30"
@@ -123,12 +124,13 @@ function InfoWidget({
 // Today's Poop Count Widget
 // ============================================
 function TodayPoopWidget({ petId }: { petId?: string }) {
-  const bowels = useDailyLogStore((state) => state.bowels);
+  // FIX: bowelLogs (스토어 실제 속성명)
+  const bowels = useDailyLogStore((state) => state.bowelLogs);
   const today = format(new Date(), "yyyy-MM-dd");
 
   const todayBowels = useMemo(() => {
     if (!petId) return [];
-    return bowels.filter((b) => b.date === today && b.petId === petId);
+    return (bowels || []).filter((b) => b.date === today && b.petId === petId);
   }, [bowels, today, petId]);
 
   return (

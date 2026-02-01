@@ -10,6 +10,8 @@ import {
 import { useWalkStore, formatWalkTime, formatDistance } from "../../stores/useWalkStore";
 import { usePetStore } from "../../stores/usePetStore";
 import { useDailyLogStore } from "../../stores/useDailyLogStore";
+import { useCalendarStore } from "../../stores/useCalendarStore";
+import { useUIStore } from "../../stores/useUIStore";
 import { format } from "date-fns";
 
 interface WalkMapModalProps {
@@ -49,6 +51,12 @@ export default function WalkMapModal({ isOpen, onClose }: WalkMapModalProps) {
 
   // Daily Log Store
   const addWalkLog = useDailyLogStore((state) => state.addWalkLog);
+
+  // Calendar Store (자동 연동)
+  const addWalkEvent = useCalendarStore((state) => state.addWalkEvent);
+
+  // UI Store (Toast)
+  const showToast = useUIStore((state) => state.showToast);
 
   // Local State
   const [showPoopAnimation, setShowPoopAnimation] = useState(false);
@@ -144,18 +152,20 @@ export default function WalkMapModal({ isOpen, onClose }: WalkMapModalProps) {
     }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     const summary = stopWalk();
     
     if (summary && selectedPet) {
-      // Save to daily log
-      addWalkLog({
+      const durationMinutes = Math.round(summary.duration / 60);
+      
+      // 1. Save to daily log (walk_logs)
+      const walkLogResult = await addWalkLog({
         petId: selectedPet.id,
         petName: selectedPet.name,
         date: format(new Date(), "yyyy-MM-dd"),
         startTime: format(summary.startTime, "HH:mm"),
         endTime: format(summary.endTime, "HH:mm"),
-        duration: Math.round(summary.duration / 60), // Convert to minutes
+        duration: durationMinutes,
         distance: summary.distance,
         distanceUnit: "km",
         satisfaction: "good",
@@ -163,6 +173,30 @@ export default function WalkMapModal({ isOpen, onClose }: WalkMapModalProps) {
           ? `💩 ${summary.poopLocations.length}회 배변`
           : undefined,
       });
+
+      // 2. Auto-sync to calendar (calendar_events)
+      try {
+        await addWalkEvent({
+          petId: selectedPet.id,
+          petName: selectedPet.name,
+          startTime: summary.startTime,
+          endTime: summary.endTime,
+          distance: summary.distance,
+          duration: durationMinutes,
+          walkLogId: walkLogResult?.id,
+        });
+        
+        // 거리 포맷팅
+        const distanceStr = summary.distance < 1 
+          ? `${Math.round(summary.distance * 1000)}m` 
+          : `${summary.distance.toFixed(2)}km`;
+        
+        showToast(`산책 완료! ${distanceStr} 🎉`, 'success');
+      } catch (error) {
+        console.error('Calendar sync failed:', error);
+        // 캘린더 연동 실패해도 walk_log는 저장되었으므로 성공 처리
+        showToast('산책 기록이 저장되었습니다', 'success');
+      }
     }
     
     onClose();

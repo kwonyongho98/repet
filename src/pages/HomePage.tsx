@@ -1,15 +1,38 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, Check, Trash2, Pin } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  Plus,
+  Check,
+  Trash2,
+  Pin,
+  Loader2,
+  ChevronRight,
+  Store,
+} from "lucide-react";
 import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
 // Stores
 import { usePetStore } from "../stores/usePetStore";
 import { useDailyLogStore } from "../stores/useDailyLogStore";
 import { useFamilyBoardStore } from "../stores/useFamilyBoardStore";
+import { useAuthStore } from "../stores/useAuthStore";
+import { useFamilyStore } from "../stores/useFamilyStore";
+import { useProviderStore } from "../stores/useProviderStore";
+import {
+  useUIStore,
+  updateAppModeBasedOnProviders,
+} from "../stores/useUIStore";
 
 // Components
-import { Button, BottomSheet, Input, TextArea, Badge } from "../components/common";
+import {
+  Button,
+  BottomSheet,
+  Input,
+  TextArea,
+  Badge,
+  WalkFAB,
+} from "../components/common";
 import {
   PetSelector,
   WalkHeroWidget,
@@ -17,6 +40,8 @@ import {
   InfoWidgetRow,
   QuickActionGridSimple,
   DailyLogFeed,
+  ProviderConnectBanner,
+  CareNoteSummary,
 } from "../components/home";
 import type { QuickActionType } from "../components/home";
 
@@ -36,6 +61,7 @@ import {
   cuteExpenseCategoryLabels,
 } from "../types/dailyLog";
 import { noteColors, defaultNoteColor } from "../types/familyBoard";
+import { serviceTypeConfig } from "../types/provider";
 
 // ============================================
 // Main Component
@@ -43,13 +69,71 @@ import { noteColors, defaultNoteColor } from "../types/familyBoard";
 export default function HomePage() {
   const navigate = useNavigate();
 
+  // Auth & Family
+  const user = useAuthStore((state) => state.user);
+  const isNewUser = useAuthStore((state) => state.isNewUser);
+
+  // UI Store - App Mode
+  const appMode = useUIStore((state) => state.appMode);
+
+  // Redirect to onboarding if new user
+  useEffect(() => {
+    if (isNewUser && user) {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [isNewUser, user, navigate]);
+
   // Stores
   const pets = usePetStore((state) => state.pets);
+  const petsLoading = usePetStore((state) => state.isLoading);
+  const fetchPets = usePetStore((state) => state.fetchPets);
   const selectedPetId = usePetStore((state) => state.selectedPetId);
   const selectedPet = useMemo(
     () => pets.find((p) => p.id === selectedPetId),
-    [pets, selectedPetId]
+    [pets, selectedPetId],
   );
+
+  // Family Store
+  const fetchFamily = useFamilyStore((state) => state.fetchFamily);
+
+  // Provider Store (My Providers)
+  const myProviders = useProviderStore((state) => state.myProviders);
+  const fetchMyProviders = useProviderStore((state) => state.fetchMyProviders);
+  const fetchMyProvider = useProviderStore((state) => state.fetchMyProvider);
+
+  // Daily Log Store - fetchAllLogs 사용 (fetchLogs가 아님!)
+  const logsLoading = useDailyLogStore((state) => state.isLoading);
+  const fetchAllLogs = useDailyLogStore((state) => state.fetchAllLogs);
+
+  // Fetch data on mount
+  useEffect(() => {
+    if (user?.familyId) {
+      fetchPets(user.familyId);
+      fetchFamily(user.familyId);
+      fetchMyProviders(user.familyId);
+    }
+    // Fetch user's provider info (if they own one)
+    fetchMyProvider();
+  }, [
+    user?.familyId,
+    fetchPets,
+    fetchFamily,
+    fetchMyProviders,
+    fetchMyProvider,
+  ]);
+
+  // pets가 로드된 후 로그 fetch
+  useEffect(() => {
+    if (pets.length > 0) {
+      const petIds = pets.map((p) => p.id);
+      fetchAllLogs(petIds, format(new Date(), "yyyy-MM-dd"));
+    }
+  }, [pets, fetchAllLogs]);
+
+  // Update app mode based on providers
+  useEffect(() => {
+    updateAppModeBasedOnProviders(myProviders.length);
+  }, [myProviders.length]);
 
   // Daily Log Actions
   const addMealLog = useDailyLogStore((state) => state.addMealLog);
@@ -179,7 +263,12 @@ export default function HomePage() {
     });
 
     setActiveSheet(null);
-    setExpenseForm({ amount: "", category: "food", description: "", notes: "" });
+    setExpenseForm({
+      amount: "",
+      category: "food",
+      description: "",
+      notes: "",
+    });
   };
 
   const handleTodoSubmit = () => {
@@ -203,7 +292,12 @@ export default function HomePage() {
       petName: selectedPet?.name,
       createdBy: noteForm.createdBy,
     });
-    setNoteForm({ title: "", content: "", color: defaultNoteColor, createdBy: "나" });
+    setNoteForm({
+      title: "",
+      content: "",
+      color: defaultNoteColor,
+      createdBy: "나",
+    });
   };
 
   // Reset Helpers
@@ -265,21 +359,77 @@ export default function HomePage() {
       {/* Section 1: Pet Selector */}
       <PetSelector />
 
-      {/* Section 2: Walk Hero Widget */}
+      {/* Section 2: Care Note Summary (Connected Mode Only) */}
+      {appMode === "connected" && <CareNoteSummary />}
+
+      {/* Section 3: Walk Hero Widget */}
       <WalkHeroWidget onStartWalk={() => setIsWalkModalOpen(true)} />
 
-      {/* Section 3: Info Widget Row */}
+      {/* Section 4: Info Widget Row */}
       <InfoWidgetRow />
 
-      {/* Section 4: Quick Actions */}
+      {/* Section 5: Quick Actions */}
       <QuickActionGridSimple onActionClick={setActiveSheet} />
 
-      {/* Section 5: Daily Log Feed */}
+      {/* Section 6: Daily Log Feed */}
       <DailyLogFeed />
 
-      {/* ============================================ */}
-      {/* Walk Map Modal (Nike Style) */}
-      {/* ============================================ */}
+      {/* Section 7: Provider Connect Banner (Pure Diary Mode Only) */}
+      {appMode === "pure_diary" && <ProviderConnectBanner variant="default" />}
+
+      {/* Section 8: My Providers (Connected Mode) */}
+      {appMode === "connected" && myProviders.length > 0 && (
+        <div className="px-4 mt-6 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              👩‍🏫 내 선생님
+            </h2>
+            <Link
+              to="/home/provider-connect"
+              className="text-sm text-orange-500 dark:text-orange-400 font-medium flex items-center gap-1"
+            >
+              <Plus size={16} />
+              연결
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {myProviders.map((provider) => (
+              <Link
+                to="/home/communication"
+                key={provider.id}
+                className="block bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-2xl">
+                    {provider.serviceType === "hotel"
+                      ? "🏨"
+                      : provider.serviceType === "training"
+                        ? "🎓"
+                        : provider.serviceType === "grooming"
+                          ? "✂️"
+                          : "🏥"}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 dark:text-white">
+                      {provider.businessName}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {serviceTypeConfig[provider.serviceType]?.label}
+                    </p>
+                  </div>
+                  <ChevronRight
+                    size={20}
+                    className="text-gray-400 dark:text-gray-500"
+                  />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Walk Modal */}
       <WalkMapModal
         isOpen={isWalkModalOpen}
         onClose={() => setIsWalkModalOpen(false)}
@@ -293,20 +443,23 @@ export default function HomePage() {
       <BottomSheet
         isOpen={activeSheet === "meal"}
         onClose={() => setActiveSheet(null)}
-        title={`🍽️ ${selectedPet?.name}의 밥 시간`}
+        title={`🍚 ${selectedPet?.name}의 밥 기록`}
       >
         <div className="space-y-4">
+          <div className="text-center py-2">
+            <span className="text-5xl">🍽️</span>
+          </div>
           <Input
-            label="시간"
+            label="먹은 시간"
             type="time"
             value={mealForm.time}
             onChange={(e) => setMealForm({ ...mealForm, time: e.target.value })}
           />
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              식사 종류
+              어떤 끼니였어요?
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {(Object.keys(cuteMealTypeLabels) as MealType[]).map((type) => (
                 <button
                   key={type}
@@ -324,14 +477,14 @@ export default function HomePage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              사료 타입
+              뭘 먹었어요?
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(Object.keys(cuteFoodTypeLabels) as FoodType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => setMealForm({ ...mealForm, foodType: type })}
-                  className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
+                  className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
                     mealForm.foodType === type
                       ? "border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
                       : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
@@ -343,18 +496,47 @@ export default function HomePage() {
             </div>
           </div>
           <Input
-            label="급여량 (g)"
+            label="얼마나 먹었어요? (g)"
             type="number"
-            placeholder="100"
+            placeholder="150"
             value={mealForm.amount}
-            onChange={(e) => setMealForm({ ...mealForm, amount: e.target.value })}
+            onChange={(e) =>
+              setMealForm({ ...mealForm, amount: e.target.value })
+            }
           />
+          <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+            <input
+              type="checkbox"
+              id="medsTaken"
+              checked={mealForm.medsTaken}
+              onChange={(e) =>
+                setMealForm({ ...mealForm, medsTaken: e.target.checked })
+              }
+              className="w-5 h-5 rounded"
+            />
+            <label
+              htmlFor="medsTaken"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              💊 약도 먹었어요!
+            </label>
+          </div>
+          {mealForm.medsTaken && (
+            <Input
+              label="무슨 약이에요?"
+              placeholder="심장약, 관절영양제..."
+              value={mealForm.medsName}
+              onChange={(e) =>
+                setMealForm({ ...mealForm, medsName: e.target.value })
+              }
+            />
+          )}
           <Button
             variant="primary"
             className="w-full rounded-2xl py-3"
             onClick={handleMealSubmit}
           >
-            🍽️ 기록 완료!
+            🍚 냠냠 완료!
           </Button>
         </div>
       </BottomSheet>
@@ -363,14 +545,19 @@ export default function HomePage() {
       <BottomSheet
         isOpen={activeSheet === "bowel"}
         onClose={() => setActiveSheet(null)}
-        title={`💩 ${selectedPet?.name}의 응가 체크`}
+        title={`💩 ${selectedPet?.name}의 배변 기록`}
       >
         <div className="space-y-4">
+          <div className="text-center py-2">
+            <span className="text-5xl">🚽</span>
+          </div>
           <Input
-            label="시간"
+            label="언제 했어요?"
             type="time"
             value={bowelForm.time}
-            onChange={(e) => setBowelForm({ ...bowelForm, time: e.target.value })}
+            onChange={(e) =>
+              setBowelForm({ ...bowelForm, time: e.target.value })
+            }
           />
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -380,10 +567,12 @@ export default function HomePage() {
               {(Object.keys(cuteBowelTypeLabels) as BowelType[]).map((type) => (
                 <button
                   key={type}
-                  onClick={() => setBowelForm({ ...bowelForm, bowelType: type })}
-                  className={`py-3 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                  onClick={() =>
+                    setBowelForm({ ...bowelForm, bowelType: type })
+                  }
+                  className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
                     bowelForm.bowelType === type
-                      ? "border-pink-500 bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
+                      ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
                       : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
                   }`}
                 >
@@ -396,37 +585,41 @@ export default function HomePage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               상태는요?
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(Object.keys(cuteBowelConditionLabels) as BowelCondition[]).map(
                 (cond) => (
                   <button
                     key={cond}
-                    onClick={() => setBowelForm({ ...bowelForm, condition: cond })}
-                    className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
+                    onClick={() =>
+                      setBowelForm({ ...bowelForm, condition: cond })
+                    }
+                    className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
                       bowelForm.condition === cond
-                        ? "border-pink-500 bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
+                        ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
                         : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     {cuteBowelConditionLabels[cond]}
                   </button>
-                )
+                ),
               )}
             </div>
           </div>
           <TextArea
-            label="특이사항 📝"
-            placeholder="건강해 보여요!"
+            label="메모 📝"
+            placeholder="특이사항이 있다면..."
             rows={2}
             value={bowelForm.notes}
-            onChange={(e) => setBowelForm({ ...bowelForm, notes: e.target.value })}
+            onChange={(e) =>
+              setBowelForm({ ...bowelForm, notes: e.target.value })
+            }
           />
           <Button
             variant="primary"
             className="w-full rounded-2xl py-3"
             onClick={handleBowelSubmit}
           >
-            ✨ 응가 완료!
+            💩 기록 완료!
           </Button>
         </div>
       </BottomSheet>
@@ -438,11 +631,8 @@ export default function HomePage() {
         title={`⚖️ ${selectedPet?.name}의 몸무게`}
       >
         <div className="space-y-4">
-          <div className="text-center py-4">
-            <span className="text-6xl">🐕</span>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              오늘의 몸무게를 기록해요!
-            </p>
+          <div className="text-center py-2">
+            <span className="text-5xl">🐕‍🦺</span>
           </div>
           <Input
             label="몸무게 (kg)"
@@ -450,14 +640,18 @@ export default function HomePage() {
             step="0.1"
             placeholder="30.5"
             value={weightForm.weight}
-            onChange={(e) => setWeightForm({ ...weightForm, weight: e.target.value })}
+            onChange={(e) =>
+              setWeightForm({ ...weightForm, weight: e.target.value })
+            }
           />
           <TextArea
             label="메모 📝"
             placeholder="다이어트 중이에요!"
             rows={2}
             value={weightForm.notes}
-            onChange={(e) => setWeightForm({ ...weightForm, notes: e.target.value })}
+            onChange={(e) =>
+              setWeightForm({ ...weightForm, notes: e.target.value })
+            }
           />
           <Button
             variant="primary"
@@ -493,21 +687,23 @@ export default function HomePage() {
               어디에 썼어요?
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(cuteExpenseCategoryLabels) as ExpenseCategory[]).map(
-                (cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setExpenseForm({ ...expenseForm, category: cat })}
-                    className={`py-2 px-3 rounded-xl border-2 text-xs font-medium transition-all ${
-                      expenseForm.category === cat
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                        : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
-                    }`}
-                  >
-                    {cuteExpenseCategoryLabels[cat]}
-                  </button>
-                )
-              )}
+              {(
+                Object.keys(cuteExpenseCategoryLabels) as ExpenseCategory[]
+              ).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() =>
+                    setExpenseForm({ ...expenseForm, category: cat })
+                  }
+                  className={`py-2 px-3 rounded-xl border-2 text-xs font-medium transition-all ${
+                    expenseForm.category === cat
+                      ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                      : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  {cuteExpenseCategoryLabels[cat]}
+                </button>
+              ))}
             </div>
           </div>
           <Input
@@ -544,7 +740,9 @@ export default function HomePage() {
               <Input
                 placeholder="새 할일 입력..."
                 value={todoForm.text}
-                onChange={(e) => setTodoForm({ ...todoForm, text: e.target.value })}
+                onChange={(e) =>
+                  setTodoForm({ ...todoForm, text: e.target.value })
+                }
                 className="flex-1"
               />
               <Button variant="primary" onClick={handleTodoSubmit}>
@@ -664,6 +862,11 @@ export default function HomePage() {
           </div>
         </div>
       </BottomSheet>
+
+      {/* ============================================ */}
+      {/* Walk FAB (Floating Action Button) */}
+      {/* ============================================ */}
+      <WalkFAB onClick={() => setIsWalkModalOpen(true)} />
 
       {/* Scrollbar hide style */}
       <style>{`

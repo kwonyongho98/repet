@@ -28,6 +28,22 @@ export type ExpenseCategory =
   | "other";    // 기타
 
 // ============================================
+// Path/Location Types for Walk
+// ============================================
+export interface PathPoint {
+  lat: number;
+  lng: number;
+  timestamp?: string;
+}
+
+export interface PoopLocation {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  type?: BowelType;
+}
+
+// ============================================
 // 산책 기록
 // ============================================
 export interface WalkLog {
@@ -42,6 +58,8 @@ export interface WalkLog {
   distanceUnit: "km" | "m";
   satisfaction: Satisfaction;
   photoUrl?: string; // Base64 또는 URL
+  pathData?: PathPoint[] | null; // 산책 경로 데이터
+  poopLocations?: PoopLocation[] | null; // 배변 위치 데이터
   notes?: string;
   createdAt: string;
 }

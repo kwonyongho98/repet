@@ -12,11 +12,16 @@ import {
   Heart,
   Moon,
   Sun,
+  Store,
+  ArrowLeftRight,
+  Home,
 } from "lucide-react";
 import { usePetStore } from "../../stores/usePetStore";
 import { useFamilyStore } from "../../stores/useFamilyStore";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useThemeStore } from "../../stores/useThemeStore";
+import { useUIStore } from "../../stores/useUIStore";
+import { useProviderStore } from "../../stores/useProviderStore";
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -34,6 +39,14 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const logout = useAuthStore((state) => state.logout);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const toggleDarkMode = useThemeStore((state) => state.toggleDarkMode);
+  
+  // UI Store (Mode Switching)
+  const viewMode = useUIStore((state) => state.viewMode);
+  const setViewMode = useUIStore((state) => state.setViewMode);
+  
+  // Provider Store
+  const myProvider = useProviderStore((state) => state.myProvider);
+  const isProviderOwner = useProviderStore((state) => state.isProviderOwner);
 
   // Close on ESC key
   useEffect(() => {
@@ -62,6 +75,24 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
     setSelectedPetId(petId);
     onClose();
     navigate("/home");
+  };
+
+  // Mode Switching
+  const handleSwitchToProvider = () => {
+    setViewMode('provider');
+    onClose();
+    navigate('/provider/dashboard');
+  };
+
+  const handleSwitchToFamily = () => {
+    setViewMode('family');
+    onClose();
+    navigate('/home');
+  };
+
+  const handleRegisterProvider = () => {
+    onClose();
+    navigate('/provider/register');
   };
 
   if (!isOpen) return null;
@@ -240,6 +271,82 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
           {/* Quick Links */}
           {/* ============================================ */}
           <div className="p-4">
+            {/* Mode Switcher Section */}
+            <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl">
+              <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-3">
+                모드 전환
+              </h4>
+              
+              {/* Current Mode Indicator */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-3 h-3 rounded-full ${viewMode === 'family' ? 'bg-orange-500' : 'bg-blue-500'}`} />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  현재: {viewMode === 'family' ? '가족 모드' : 'Provider 모드'}
+                </span>
+              </div>
+
+              {/* Mode Switch Buttons */}
+              {viewMode === 'family' ? (
+                // In Family Mode - Show options to go to Provider
+                isProviderOwner && myProvider ? (
+                  <button
+                    onClick={handleSwitchToProvider}
+                    className="w-full flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors border border-blue-200 dark:border-blue-800"
+                  >
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center">
+                      <Store size={20} className="text-blue-500" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">
+                        {myProvider.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Provider 모드로 전환
+                      </p>
+                    </div>
+                    <ArrowLeftRight size={18} className="text-blue-500" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRegisterProvider}
+                    className="w-full flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors border border-green-200 dark:border-green-800"
+                  >
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
+                      <Plus size={20} className="text-green-500" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">
+                        업체 등록하기
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        펫호텔, 미용실 등 운영 시
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className="text-green-500" />
+                  </button>
+                )
+              ) : (
+                // In Provider Mode - Show option to go back to Family
+                <button
+                  onClick={handleSwitchToFamily}
+                  className="w-full flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-colors border border-orange-200 dark:border-orange-800"
+                >
+                  <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center">
+                    <Home size={20} className="text-orange-500" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">
+                      가족 모드로 돌아가기
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      내 반려동물 관리
+                    </p>
+                  </div>
+                  <ArrowLeftRight size={18} className="text-orange-500" />
+                </button>
+              )}
+            </div>
+
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   format,
   startOfMonth,
@@ -10,17 +10,14 @@ import {
   subMonths,
 } from "date-fns";
 import { ko } from "date-fns/locale";
-import {
-  Button,
-  Modal,
-  Input,
-  Select,
-  TextArea,
-} from "../components/common";
+import { Button, Modal, Input, Select, TextArea } from "../components/common";
+import { FilterChips, filterEventsByType } from "../components/calendar";
+import type { CalendarFilterType } from "../components/calendar";
 import type { EventType, CalendarEvent } from "../types/calendar";
 import { usePetStore } from "../stores/usePetStore";
 import { useCalendarStore } from "../stores/useCalendarStore";
 import { useDailyLogStore } from "../stores/useDailyLogStore";
+import { useAuthStore } from "../stores/useAuthStore";
 import type {
   WalkLog,
   MealLog,
@@ -64,9 +61,18 @@ import {
 // ============================================
 // Types
 // ============================================
-type CombinedEventType = 
-  | "walk" | "meal" | "bowel" | "weight" | "expense" 
-  | "health" | "grooming" | "training" | "hotel" | "hospital" | "other";
+type CombinedEventType =
+  | "walk"
+  | "meal"
+  | "bowel"
+  | "weight"
+  | "expense"
+  | "health"
+  | "grooming"
+  | "training"
+  | "hotel"
+  | "hospital"
+  | "other";
 
 interface CombinedDailyItem {
   id: string;
@@ -76,13 +82,32 @@ interface CombinedDailyItem {
   subtitle?: string;
   petName: string;
   color: string;
-  originalData: WalkLog | MealLog | BowelLog | WeightLog | ExpenseLog | CalendarEvent;
+  originalData:
+    | WalkLog
+    | MealLog
+    | BowelLog
+    | WeightLog
+    | ExpenseLog
+    | CalendarEvent;
 }
 
 // ============================================
 // Constants
 // ============================================
-const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+const monthNames = [
+  "1월",
+  "2월",
+  "3월",
+  "4월",
+  "5월",
+  "6월",
+  "7월",
+  "8월",
+  "9월",
+  "10월",
+  "11월",
+  "12월",
+];
 const baseYear = new Date().getFullYear();
 const yearRange = Array.from({ length: 11 }, (_, i) => baseYear - 5 + i);
 
@@ -95,36 +120,82 @@ const eventTypeLabels: Record<string, string> = {
   other: "기타",
 };
 
-// 이벤트 타입별 아이콘 & 색상
-const getEventIcon = (type: CombinedEventType) => {
+const getEventColor = (type: CombinedEventType): string => {
   switch (type) {
-    case "walk": return <PawPrint size={18} />;
-    case "meal": return <Utensils size={18} />;
-    case "bowel": return <Circle size={18} />;
-    case "weight": return <Scale size={18} />;
-    case "expense": return <Wallet size={18} />;
-    case "grooming": return <Scissors size={18} />;
+    case "walk":
+      return "#22c55e";
+    case "meal":
+      return "#f97316";
+    case "bowel":
+      return "#eab308";
+    case "weight":
+      return "#3b82f6";
+    case "expense":
+      return "#a855f7";
     case "health":
-    case "hospital": return <Stethoscope size={18} />;
-    case "training": return <GraduationCap size={18} />;
-    case "hotel": return <Hotel size={18} />;
-    default: return <Calendar size={18} />;
+      return "#ec4899";
+    case "grooming":
+      return "#06b6d4";
+    case "training":
+      return "#8b5cf6";
+    case "hotel":
+      return "#f59e0b";
+    case "hospital":
+      return "#ef4444";
+    default:
+      return "#6b7280";
   }
 };
 
-const getEventColor = (type: CombinedEventType): string => {
+const getEventIcon = (type: CombinedEventType) => {
   switch (type) {
-    case "walk": return "#22c55e";      // green-500
-    case "meal": return "#f97316";      // orange-500
-    case "bowel": return "#d97706";     // amber-600
-    case "weight": return "#a855f7";    // purple-500
-    case "expense": return "#ec4899";   // pink-500
-    case "grooming": return "#06b6d4";  // cyan-500
+    case "walk":
+      return <PawPrint size={18} />;
+    case "meal":
+      return <Utensils size={18} />;
+    case "bowel":
+      return <Circle size={18} />;
+    case "weight":
+      return <Scale size={18} />;
+    case "expense":
+      return <Wallet size={18} />;
+    case "grooming":
+      return <Scissors size={18} />;
     case "health":
-    case "hospital": return "#ef4444";  // red-500
-    case "training": return "#3b82f6";  // blue-500
-    case "hotel": return "#8b5cf6";     // violet-500
-    default: return "#6b7280";          // gray-500
+    case "hospital":
+      return <Stethoscope size={18} />;
+    case "training":
+      return <GraduationCap size={18} />;
+    case "hotel":
+      return <Hotel size={18} />;
+    default:
+      return <Calendar size={18} />;
+  }
+};
+
+const getEventEmoji = (type: CombinedEventType): string => {
+  switch (type) {
+    case "walk":
+      return "🐕";
+    case "meal":
+      return "🍚";
+    case "bowel":
+      return "💩";
+    case "weight":
+      return "⚖️";
+    case "expense":
+      return "💰";
+    case "grooming":
+      return "✂️";
+    case "health":
+    case "hospital":
+      return "🏥";
+    case "training":
+      return "🎓";
+    case "hotel":
+      return "🏨";
+    default:
+      return "📅";
   }
 };
 
@@ -132,19 +203,23 @@ const getEventColor = (type: CombinedEventType): string => {
 // Main Component
 // ============================================
 export default function CalendarPage() {
+  const user = useAuthStore((state) => state.user);
+
   // Stores
   const pets = usePetStore((state) => state.pets);
   const selectedPetId = usePetStore((state) => state.selectedPetId); // Global filter
   const events = useCalendarStore((state) => state.events);
   const addEvent = useCalendarStore((state) => state.addEvent);
+  const fetchEvents = useCalendarStore((state) => state.fetchEvents);
   const updateEvent = useCalendarStore((state) => state.updateEvent);
   const deleteEvent = useCalendarStore((state) => state.deleteEvent);
 
-  const walks = useDailyLogStore((state) => state.walks);
-  const meals = useDailyLogStore((state) => state.meals);
-  const bowels = useDailyLogStore((state) => state.bowels);
-  const weights = useDailyLogStore((state) => state.weights);
-  const expenses = useDailyLogStore((state) => state.expenses);
+  // ✅ 수정: walks → walkLogs, meals → mealLogs 등
+  const walks = useDailyLogStore((state) => state.walkLogs);
+  const meals = useDailyLogStore((state) => state.mealLogs);
+  const bowels = useDailyLogStore((state) => state.bowelLogs);
+  const weights = useDailyLogStore((state) => state.weightLogs);
+  const expenses = useDailyLogStore((state) => state.expenseLogs);
   const deleteWalkLog = useDailyLogStore((state) => state.deleteWalkLog);
   const deleteMealLog = useDailyLogStore((state) => state.deleteMealLog);
   const deleteBowelLog = useDailyLogStore((state) => state.deleteBowelLog);
@@ -162,8 +237,21 @@ export default function CalendarPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<CombinedDailyItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CombinedDailyItem | null>(
+    null,
+  );
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
+  // Filter State
+  const [activeFilter, setActiveFilter] = useState<CalendarFilterType>("all");
+
+  // Fetch events when month changes or on mount
+  useEffect(() => {
+    if (user?.familyId) {
+      const month = format(currentDate, "yyyy-MM");
+      fetchEvents(user.familyId, month);
+    }
+  }, [user?.familyId, currentDate, fetchEvents]);
 
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -185,98 +273,117 @@ export default function CalendarPage() {
     const petFilter = (petId: string) => petId === selectedPetId;
 
     // Walks
-    walks.filter(w => w.date === dateStr && petFilter(w.petId)).forEach(walk => {
-      items.push({
-        id: walk.id,
-        type: "walk",
-        time: walk.startTime,
-        title: `산책 ${walk.duration}분`,
-        subtitle: walk.distance ? `${walk.distance}${walk.distanceUnit}` : undefined,
-        petName: walk.petName,
-        color: getEventColor("walk"),
-        originalData: walk,
+    (walks || [])
+      .filter((w) => w.date === dateStr && petFilter(w.petId))
+      .forEach((walk) => {
+        items.push({
+          id: walk.id,
+          type: "walk",
+          time: walk.startTime,
+          title: `산책 ${walk.duration}분`,
+          subtitle: walk.distance
+            ? `${walk.distance}${walk.distanceUnit}`
+            : undefined,
+          petName: walk.petName,
+          color: getEventColor("walk"),
+          originalData: walk,
+        });
       });
-    });
 
     // Meals
-    meals.filter(m => m.date === dateStr && petFilter(m.petId)).forEach(meal => {
-      items.push({
-        id: meal.id,
-        type: "meal",
-        time: meal.time,
-        title: `${mealTypeLabels[meal.mealType]} ${meal.amount}g`,
-        subtitle: meal.foodName || foodTypeLabels[meal.foodType],
-        petName: meal.petName,
-        color: getEventColor("meal"),
-        originalData: meal,
+    (meals || [])
+      .filter((m) => m.date === dateStr && petFilter(m.petId))
+      .forEach((meal) => {
+        items.push({
+          id: meal.id,
+          type: "meal",
+          time: meal.time,
+          title: `${mealTypeLabels[meal.mealType]} ${meal.amount}g`,
+          subtitle: meal.foodName || foodTypeLabels[meal.foodType],
+          petName: meal.petName,
+          color: getEventColor("meal"),
+          originalData: meal,
+        });
       });
-    });
 
     // Bowels
-    bowels.filter(b => b.date === dateStr && petFilter(b.petId)).forEach(bowel => {
-      items.push({
-        id: bowel.id,
-        type: "bowel",
-        time: bowel.time,
-        title: bowelTypeLabels[bowel.bowelType],
-        subtitle: bowelConditionLabels[bowel.condition],
-        petName: bowel.petName,
-        color: getEventColor("bowel"),
-        originalData: bowel,
+    (bowels || [])
+      .filter((b) => b.date === dateStr && petFilter(b.petId))
+      .forEach((bowel) => {
+        items.push({
+          id: bowel.id,
+          type: "bowel",
+          time: bowel.time,
+          title: bowelTypeLabels[bowel.bowelType],
+          subtitle: bowelConditionLabels[bowel.condition],
+          petName: bowel.petName,
+          color: getEventColor("bowel"),
+          originalData: bowel,
+        });
       });
-    });
 
     // Weights
-    weights.filter(w => w.date === dateStr && petFilter(w.petId)).forEach(weight => {
-      items.push({
-        id: weight.id,
-        type: "weight",
-        time: "00:00",
-        title: `체중 ${weight.weight}kg`,
-        petName: weight.petName,
-        color: getEventColor("weight"),
-        originalData: weight,
+    (weights || [])
+      .filter((w) => w.date === dateStr && petFilter(w.petId))
+      .forEach((weight) => {
+        items.push({
+          id: weight.id,
+          type: "weight",
+          time: "00:00",
+          title: `체중 ${weight.weight}kg`,
+          petName: weight.petName,
+          color: getEventColor("weight"),
+          originalData: weight,
+        });
       });
-    });
 
     // Expenses
-    expenses.filter(e => e.date === dateStr && petFilter(e.petId)).forEach(expense => {
-      items.push({
-        id: expense.id,
-        type: "expense",
-        time: "00:00",
-        title: expense.description,
-        subtitle: `${expense.amount.toLocaleString()}원`,
-        petName: expense.petName,
-        color: getEventColor("expense"),
-        originalData: expense,
+    (expenses || [])
+      .filter((e) => e.date === dateStr && petFilter(e.petId))
+      .forEach((expense) => {
+        items.push({
+          id: expense.id,
+          type: "expense",
+          time: "00:00",
+          title: expense.description,
+          subtitle: `${expense.amount.toLocaleString()}원`,
+          petName: expense.petName,
+          color: getEventColor("expense"),
+          originalData: expense,
+        });
       });
-    });
 
     // Calendar Events
-    events.filter(e => {
-      const eventDate = format(e.start, "yyyy-MM-dd");
-      return eventDate === dateStr && petFilter(e.petId);
-    }).forEach(event => {
-      items.push({
-        id: event.id,
-        type: event.type as CombinedEventType,
-        time: format(event.start, "HH:mm"),
-        title: event.title,
-        subtitle: event.location,
-        petName: event.petName,
-        color: pets.find(p => p.id === event.petId)?.color || getEventColor(event.type as CombinedEventType),
-        originalData: event,
+    (events || [])
+      .filter((e) => {
+        const eventDate = format(e.start, "yyyy-MM-dd");
+        return eventDate === dateStr && petFilter(e.petId);
+      })
+      .forEach((event) => {
+        items.push({
+          id: event.id,
+          type: event.type as CombinedEventType,
+          time: format(event.start, "HH:mm"),
+          title: event.title,
+          subtitle: event.location,
+          petName: event.petName,
+          color:
+            pets.find((p) => p.id === event.petId)?.color ||
+            getEventColor(event.type as CombinedEventType),
+          originalData: event,
+        });
       });
-    });
 
     // Sort by time
-    return items.sort((a, b) => a.time.localeCompare(b.time));
+    const sortedItems = items.sort((a, b) => a.time.localeCompare(b.time));
+
+    // Apply filter
+    return filterEventsByType(sortedItems, activeFilter);
   };
 
   // Filtered events for calendar display (using global filter)
   const filteredEvents = useMemo(() => {
-    return events.filter((event) => event.petId === selectedPetId);
+    return (events || []).filter((event) => event.petId === selectedPetId);
   }, [events, selectedPetId]);
 
   // Events by date for calendar display
@@ -292,39 +399,87 @@ export default function CalendarPage() {
 
   // Logs summary for calendar (with counts for stamp display)
   const logsByDate = useMemo(() => {
-    const logsMap: Record<string, { 
-      walkCount: number; 
-      mealCount: number; 
-      bowelCount: number;
-      weightCount: number;
-      expenseCount: number;
-    }> = {};
+    const logsMap: Record<
+      string,
+      {
+        walkCount: number;
+        mealCount: number;
+        bowelCount: number;
+        weightCount: number;
+        expenseCount: number;
+      }
+    > = {};
     const petFilter = (petId: string) => petId === selectedPetId;
 
-    walks.filter(w => petFilter(w.petId)).forEach(w => {
-      if (!logsMap[w.date]) logsMap[w.date] = { walkCount: 0, mealCount: 0, bowelCount: 0, weightCount: 0, expenseCount: 0 };
-      logsMap[w.date].walkCount++;
-    });
+    (walks || [])
+      .filter((w) => petFilter(w.petId))
+      .forEach((w) => {
+        if (!logsMap[w.date])
+          logsMap[w.date] = {
+            walkCount: 0,
+            mealCount: 0,
+            bowelCount: 0,
+            weightCount: 0,
+            expenseCount: 0,
+          };
+        logsMap[w.date].walkCount++;
+      });
 
-    meals.filter(m => petFilter(m.petId)).forEach(m => {
-      if (!logsMap[m.date]) logsMap[m.date] = { walkCount: 0, mealCount: 0, bowelCount: 0, weightCount: 0, expenseCount: 0 };
-      logsMap[m.date].mealCount++;
-    });
+    (meals || [])
+      .filter((m) => petFilter(m.petId))
+      .forEach((m) => {
+        if (!logsMap[m.date])
+          logsMap[m.date] = {
+            walkCount: 0,
+            mealCount: 0,
+            bowelCount: 0,
+            weightCount: 0,
+            expenseCount: 0,
+          };
+        logsMap[m.date].mealCount++;
+      });
 
-    bowels.filter(b => petFilter(b.petId)).forEach(b => {
-      if (!logsMap[b.date]) logsMap[b.date] = { walkCount: 0, mealCount: 0, bowelCount: 0, weightCount: 0, expenseCount: 0 };
-      logsMap[b.date].bowelCount++;
-    });
+    (bowels || [])
+      .filter((b) => petFilter(b.petId))
+      .forEach((b) => {
+        if (!logsMap[b.date])
+          logsMap[b.date] = {
+            walkCount: 0,
+            mealCount: 0,
+            bowelCount: 0,
+            weightCount: 0,
+            expenseCount: 0,
+          };
+        logsMap[b.date].bowelCount++;
+      });
 
-    weights.filter(w => petFilter(w.petId)).forEach(w => {
-      if (!logsMap[w.date]) logsMap[w.date] = { walkCount: 0, mealCount: 0, bowelCount: 0, weightCount: 0, expenseCount: 0 };
-      logsMap[w.date].weightCount++;
-    });
+    (weights || [])
+      .filter((w) => petFilter(w.petId))
+      .forEach((w) => {
+        if (!logsMap[w.date])
+          logsMap[w.date] = {
+            walkCount: 0,
+            mealCount: 0,
+            bowelCount: 0,
+            weightCount: 0,
+            expenseCount: 0,
+          };
+        logsMap[w.date].weightCount++;
+      });
 
-    expenses.filter(e => petFilter(e.petId)).forEach(e => {
-      if (!logsMap[e.date]) logsMap[e.date] = { walkCount: 0, mealCount: 0, bowelCount: 0, weightCount: 0, expenseCount: 0 };
-      logsMap[e.date].expenseCount++;
-    });
+    (expenses || [])
+      .filter((e) => petFilter(e.petId))
+      .forEach((e) => {
+        if (!logsMap[e.date])
+          logsMap[e.date] = {
+            walkCount: 0,
+            mealCount: 0,
+            bowelCount: 0,
+            weightCount: 0,
+            expenseCount: 0,
+          };
+        logsMap[e.date].expenseCount++;
+      });
 
     return logsMap;
   }, [walks, meals, bowels, weights, expenses, selectedPetId]);
@@ -334,7 +489,7 @@ export default function CalendarPage() {
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
     const days = eachDayOfInterval({ start, end });
-    
+
     const firstDayOfWeek = start.getDay();
     const prevMonthDays: Date[] = [];
     if (firstDayOfWeek > 0) {
@@ -346,7 +501,7 @@ export default function CalendarPage() {
         prevMonthDays.push(d);
       }
     }
-    
+
     const totalDays = prevMonthDays.length + days.length;
     const nextMonthDays: Date[] = [];
     const remainingDays = 42 - totalDays;
@@ -358,7 +513,7 @@ export default function CalendarPage() {
         nextMonthDays.push(d);
       }
     }
-    
+
     return [...prevMonthDays, ...days, ...nextMonthDays];
   }, [currentDate]);
 
@@ -436,7 +591,7 @@ export default function CalendarPage() {
   // Edit calendar event
   const handleEditCalendarEvent = () => {
     if (!selectedItem) return;
-    
+
     const event = selectedItem.originalData as CalendarEvent;
     setEditingEvent(event);
     setNewEvent({
@@ -529,34 +684,56 @@ export default function CalendarPage() {
 
   // Check if item is calendar event
   const isCalendarEvent = (type: CombinedEventType) => {
-    return ["health", "grooming", "training", "hotel", "hospital", "other"].includes(type);
+    return [
+      "health",
+      "grooming",
+      "training",
+      "hotel",
+      "hospital",
+      "other",
+    ].includes(type);
   };
 
   return (
-    <div className="h-full flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
+    <div
+      className="h-full flex flex-col"
+      style={{ height: "calc(100vh - 64px)" }}
+    >
       {/* ============================================ */}
       {/* Header */}
       {/* ============================================ */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsYearMonthPickerOpen(true)}
-            className="flex items-center gap-1 text-2xl font-bold text-gray-900 hover:text-orange-600 transition-colors"
+            className="flex items-center gap-1 text-2xl font-bold text-gray-900 dark:text-white hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
           >
             {format(currentDate, "yyyy년 M월")}
             <ChevronRight size={24} className="text-gray-400" />
           </button>
-          
+
           <div className="flex items-center gap-1 ml-2">
-            <button onClick={goToPrevMonth} className="p-2 rounded-full hover:bg-gray-100">
-              <ChevronLeft size={20} className="text-gray-600" />
+            <button
+              onClick={goToPrevMonth}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+            >
+              <ChevronLeft
+                size={20}
+                className="text-gray-600 dark:text-gray-300"
+              />
             </button>
-            <button onClick={goToNextMonth} className="p-2 rounded-full hover:bg-gray-100">
-              <ChevronRight size={20} className="text-gray-600" />
+            <button
+              onClick={goToNextMonth}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+            >
+              <ChevronRight
+                size={20}
+                className="text-gray-600 dark:text-gray-300"
+              />
             </button>
             <button
               onClick={goToToday}
-              className="ml-2 px-3 py-1 text-sm font-medium text-orange-600 bg-orange-50 rounded-full hover:bg-orange-100"
+              className="ml-2 px-3 py-1 text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/50"
             >
               오늘
             </button>
@@ -565,14 +742,14 @@ export default function CalendarPage() {
 
         {/* Selected Pet Indicator (Global Filter) */}
         {selectedPet && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-full">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 rounded-full">
             <div
               className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
               style={{ backgroundColor: selectedPet.color }}
             >
               {selectedPet.name.charAt(0)}
             </div>
-            <span className="text-sm font-medium text-orange-700">
+            <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
               {selectedPet.name}
             </span>
           </div>
@@ -580,16 +757,30 @@ export default function CalendarPage() {
       </div>
 
       {/* ============================================ */}
+      {/* Filter Chips */}
+      {/* ============================================ */}
+      <div className="px-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
+        <FilterChips
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
+      </div>
+
+      {/* ============================================ */}
       {/* Calendar Grid */}
       {/* ============================================ */}
-      <div className="flex-1 bg-white overflow-hidden flex flex-col">
+      <div className="flex-1 bg-white dark:bg-slate-800 overflow-hidden flex flex-col">
         {/* Weekday Header */}
-        <div className="grid grid-cols-7 border-b border-gray-200">
+        <div className="grid grid-cols-7 border-b border-gray-200 dark:border-slate-700">
           {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
             <div
               key={day}
               className={`py-3 text-center text-sm font-semibold ${
-                idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-gray-700"
+                idx === 0
+                  ? "text-red-500"
+                  : idx === 6
+                    ? "text-blue-500"
+                    : "text-gray-700 dark:text-gray-300"
               }`}
             >
               {day}
@@ -625,9 +816,15 @@ export default function CalendarPage() {
                   <span
                     className={`
                       text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full
-                      ${!isCurrentMonth ? "text-gray-300" : 
-                        dayOfWeek === 0 ? "text-red-500" : 
-                        dayOfWeek === 6 ? "text-blue-500" : "text-gray-700"}
+                      ${
+                        !isCurrentMonth
+                          ? "text-gray-300"
+                          : dayOfWeek === 0
+                            ? "text-red-500"
+                            : dayOfWeek === 6
+                              ? "text-blue-500"
+                              : "text-gray-700"
+                      }
                       ${isToday ? "bg-orange-500 text-white" : ""}
                     `}
                   >
@@ -666,34 +863,47 @@ export default function CalendarPage() {
                       <div className="flex items-center">
                         <span className="text-xs">👃</span>
                         {logs.walkCount > 1 && (
-                          <span className="text-[9px] text-green-600 font-medium" style={{ fontFamily: 'Comic Sans MS, cursive' }}>
+                          <span
+                            className="text-[9px] text-green-600 font-medium"
+                            style={{ fontFamily: "Comic Sans MS, cursive" }}
+                          >
                             x{logs.walkCount}
                           </span>
                         )}
                       </div>
                     )}
-                    
+
                     {/* 냠냠 (식사) - 횟수 표시 */}
                     {logs.mealCount > 0 && (
                       <div className="flex items-center">
                         <span className="text-xs">😋</span>
                         {logs.mealCount > 1 && (
-                          <span className="text-[9px] text-orange-600 font-medium" style={{ fontFamily: 'Comic Sans MS, cursive' }}>
+                          <span
+                            className="text-[9px] text-orange-600 font-medium"
+                            style={{ fontFamily: "Comic Sans MS, cursive" }}
+                          >
                             x{logs.mealCount}
                           </span>
                         )}
                       </div>
                     )}
-                    
+
                     {/* 응가 (배변) - 이모지 반복 또는 +N */}
                     {logs.bowelCount > 0 && (
                       <div className="flex items-center">
-                        {logs.bowelCount === 1 && <span className="text-xs">💩</span>}
-                        {logs.bowelCount === 2 && <span className="text-xs">💩💩</span>}
+                        {logs.bowelCount === 1 && (
+                          <span className="text-xs">💩</span>
+                        )}
+                        {logs.bowelCount === 2 && (
+                          <span className="text-xs">💩💩</span>
+                        )}
                         {logs.bowelCount >= 3 && (
                           <>
                             <span className="text-xs">💩</span>
-                            <span className="text-[9px] text-amber-600 font-medium" style={{ fontFamily: 'Comic Sans MS, cursive' }}>
+                            <span
+                              className="text-[9px] text-amber-600 font-medium"
+                              style={{ fontFamily: "Comic Sans MS, cursive" }}
+                            >
                               x{logs.bowelCount}
                             </span>
                           </>
@@ -711,7 +921,10 @@ export default function CalendarPage() {
                       <div className="flex items-center">
                         <span className="text-xs">🐷</span>
                         {logs.expenseCount > 1 && (
-                          <span className="text-[9px] text-pink-600 font-medium" style={{ fontFamily: 'Comic Sans MS, cursive' }}>
+                          <span
+                            className="text-[9px] text-pink-600 font-medium"
+                            style={{ fontFamily: "Comic Sans MS, cursive" }}
+                          >
                             x{logs.expenseCount}
                           </span>
                         )}
@@ -814,7 +1027,9 @@ export default function CalendarPage() {
                         <p className="text-sm text-gray-500">
                           {item.time !== "00:00" ? (
                             <>
-                              {parseInt(item.time.split(":")[0]) < 12 ? "오전" : "오후"}{" "}
+                              {parseInt(item.time.split(":")[0]) < 12
+                                ? "오전"
+                                : "오후"}{" "}
                               {item.time}
                             </>
                           ) : (
@@ -881,7 +1096,7 @@ export default function CalendarPage() {
             className="absolute inset-0 bg-black/30"
             onClick={() => setSelectedItem(null)}
           />
-          
+
           <div
             className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl"
             style={{ animation: "slideUp 0.2s ease-out" }}
@@ -896,13 +1111,20 @@ export default function CalendarPage() {
               <div className="flex items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: `${selectedItem.color}20`, color: selectedItem.color }}
+                  style={{
+                    backgroundColor: `${selectedItem.color}20`,
+                    color: selectedItem.color,
+                  }}
                 >
                   {getEventIcon(selectedItem.type)}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900">{selectedItem.title}</h3>
-                  <p className="text-sm text-gray-500">{selectedItem.petName}</p>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {selectedItem.title}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {selectedItem.petName}
+                  </p>
                 </div>
                 <button
                   onClick={() => setSelectedItem(null)}
@@ -923,7 +1145,7 @@ export default function CalendarPage() {
                     : "종일"}
                 </span>
               </div>
-              
+
               {selectedItem.subtitle && (
                 <div className="flex items-center gap-3 text-gray-600">
                   <MoreHorizontal size={18} />
@@ -935,7 +1157,11 @@ export default function CalendarPage() {
               {selectedItem.type === "walk" && (
                 <div className="p-3 bg-green-50 rounded-xl">
                   <p className="text-sm text-green-700">
-                    {satisfactionLabels[(selectedItem.originalData as WalkLog).satisfaction]}
+                    {
+                      satisfactionLabels[
+                        (selectedItem.originalData as WalkLog).satisfaction
+                      ]
+                    }
                   </p>
                   {(selectedItem.originalData as WalkLog).notes && (
                     <p className="text-sm text-gray-600 mt-1">
@@ -945,24 +1171,29 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {selectedItem.type === "meal" && (selectedItem.originalData as MealLog).medsTaken && (
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <p className="text-sm text-blue-700">💊 약 복용 완료</p>
-                  {(selectedItem.originalData as MealLog).medsName && (
-                    <p className="text-sm text-gray-600">
-                      {(selectedItem.originalData as MealLog).medsName}
-                    </p>
-                  )}
-                </div>
-              )}
+              {selectedItem.type === "meal" &&
+                (selectedItem.originalData as MealLog).medsTaken && (
+                  <div className="p-3 bg-blue-50 rounded-xl">
+                    <p className="text-sm text-blue-700">💊 약 복용 완료</p>
+                    {(selectedItem.originalData as MealLog).medsName && (
+                      <p className="text-sm text-gray-600">
+                        {(selectedItem.originalData as MealLog).medsName}
+                      </p>
+                    )}
+                  </div>
+                )}
 
               {isCalendarEvent(selectedItem.type) && (
                 <>
-                  {(selectedItem.originalData as CalendarEvent).serviceProvider && (
+                  {(selectedItem.originalData as CalendarEvent)
+                    .serviceProvider && (
                     <div className="p-3 bg-gray-50 rounded-xl">
                       <p className="text-xs text-gray-500">담당자</p>
                       <p className="text-sm text-gray-700">
-                        {(selectedItem.originalData as CalendarEvent).serviceProvider}
+                        {
+                          (selectedItem.originalData as CalendarEvent)
+                            .serviceProvider
+                        }
                       </p>
                     </div>
                   )}
@@ -970,7 +1201,10 @@ export default function CalendarPage() {
                     <div className="p-3 bg-gray-50 rounded-xl">
                       <p className="text-xs text-gray-500">메모</p>
                       <p className="text-sm text-gray-700">
-                        {(selectedItem.originalData as CalendarEvent).description}
+                        {
+                          (selectedItem.originalData as CalendarEvent)
+                            .description
+                        }
                       </p>
                     </div>
                   )}
@@ -1014,12 +1248,16 @@ export default function CalendarPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">연도</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              연도
+            </label>
             <div className="grid grid-cols-4 gap-2">
               {yearRange.map((year) => (
                 <button
                   key={year}
-                  onClick={() => setCurrentDate(new Date(year, currentDate.getMonth(), 1))}
+                  onClick={() =>
+                    setCurrentDate(new Date(year, currentDate.getMonth(), 1))
+                  }
                   className={`py-2 px-3 rounded-lg text-sm font-medium ${
                     year === currentDate.getFullYear()
                       ? "bg-orange-500 text-white"
@@ -1032,7 +1270,9 @@ export default function CalendarPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">월</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              월
+            </label>
             <div className="grid grid-cols-4 gap-2">
               {monthNames.map((name, idx) => (
                 <button
@@ -1060,7 +1300,10 @@ export default function CalendarPage() {
       {/* ============================================ */}
       <Modal
         isOpen={isAddModalOpen}
-        onClose={() => { setIsAddModalOpen(false); resetForm(); }}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          resetForm();
+        }}
         title="새 일정 추가"
         maxWidth="lg"
       >
@@ -1069,14 +1312,18 @@ export default function CalendarPage() {
             label="일정 제목"
             placeholder="예: 멍멍이 건강검진"
             value={newEvent.title}
-            onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, title: e.target.value })
+            }
             required
           />
           <div className="grid grid-cols-2 gap-4">
             <Select
               label="반려견"
               value={newEvent.petId}
-              onChange={(e) => setNewEvent({ ...newEvent, petId: e.target.value })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, petId: e.target.value })
+              }
               options={[
                 { value: "", label: "선택하세요" },
                 ...pets.map((pet) => ({ value: pet.id, label: pet.name })),
@@ -1086,7 +1333,9 @@ export default function CalendarPage() {
             <Select
               label="일정 타입"
               value={newEvent.type}
-              onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as EventType })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, type: e.target.value as EventType })
+              }
               options={[
                 { value: "health", label: "병원" },
                 { value: "grooming", label: "미용" },
@@ -1110,14 +1359,18 @@ export default function CalendarPage() {
               label="시작 시간"
               type="time"
               value={newEvent.startTime}
-              onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, startTime: e.target.value })
+              }
               required
             />
             <Input
               label="종료 시간"
               type="time"
               value={newEvent.endTime}
-              onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, endTime: e.target.value })
+              }
               required
             />
           </div>
@@ -1125,23 +1378,37 @@ export default function CalendarPage() {
             label="장소"
             placeholder="예: 행복 동물병원"
             value={newEvent.location}
-            onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, location: e.target.value })
+            }
           />
           <Input
             label="담당자/업체명"
             placeholder="예: 김수의 원장님"
             value={newEvent.serviceProvider}
-            onChange={(e) => setNewEvent({ ...newEvent, serviceProvider: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, serviceProvider: e.target.value })
+            }
           />
           <TextArea
             label="메모"
             placeholder="추가 메모사항을 입력하세요"
             rows={3}
             value={newEvent.description}
-            onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, description: e.target.value })
+            }
           />
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsAddModalOpen(false); resetForm(); }}>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsAddModalOpen(false);
+                resetForm();
+              }}
+            >
               취소
             </Button>
             <Button type="submit" variant="primary" className="flex-1">
@@ -1156,7 +1423,11 @@ export default function CalendarPage() {
       {/* ============================================ */}
       <Modal
         isOpen={isEditModalOpen}
-        onClose={() => { setIsEditModalOpen(false); setEditingEvent(null); resetForm(); }}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingEvent(null);
+          resetForm();
+        }}
         title="일정 수정"
         maxWidth="lg"
       >
@@ -1165,14 +1436,18 @@ export default function CalendarPage() {
             label="일정 제목"
             placeholder="예: 멍멍이 건강검진"
             value={newEvent.title}
-            onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, title: e.target.value })
+            }
             required
           />
           <div className="grid grid-cols-2 gap-4">
             <Select
               label="반려견"
               value={newEvent.petId}
-              onChange={(e) => setNewEvent({ ...newEvent, petId: e.target.value })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, petId: e.target.value })
+              }
               options={[
                 { value: "", label: "선택하세요" },
                 ...pets.map((pet) => ({ value: pet.id, label: pet.name })),
@@ -1182,7 +1457,9 @@ export default function CalendarPage() {
             <Select
               label="일정 타입"
               value={newEvent.type}
-              onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as EventType })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, type: e.target.value as EventType })
+              }
               options={[
                 { value: "health", label: "병원" },
                 { value: "grooming", label: "미용" },
@@ -1206,14 +1483,18 @@ export default function CalendarPage() {
               label="시작 시간"
               type="time"
               value={newEvent.startTime}
-              onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, startTime: e.target.value })
+              }
               required
             />
             <Input
               label="종료 시간"
               type="time"
               value={newEvent.endTime}
-              onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+              onChange={(e) =>
+                setNewEvent({ ...newEvent, endTime: e.target.value })
+              }
               required
             />
           </div>
@@ -1221,23 +1502,38 @@ export default function CalendarPage() {
             label="장소"
             placeholder="예: 행복 동물병원"
             value={newEvent.location}
-            onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, location: e.target.value })
+            }
           />
           <Input
             label="담당자/업체명"
             placeholder="예: 김수의 원장님"
             value={newEvent.serviceProvider}
-            onChange={(e) => setNewEvent({ ...newEvent, serviceProvider: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, serviceProvider: e.target.value })
+            }
           />
           <TextArea
             label="메모"
             placeholder="추가 메모사항을 입력하세요"
             rows={3}
             value={newEvent.description}
-            onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+            onChange={(e) =>
+              setNewEvent({ ...newEvent, description: e.target.value })
+            }
           />
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsEditModalOpen(false); setEditingEvent(null); resetForm(); }}>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setEditingEvent(null);
+                resetForm();
+              }}
+            >
               취소
             </Button>
             <Button type="submit" variant="primary" className="flex-1">
@@ -1258,14 +1554,25 @@ export default function CalendarPage() {
       >
         <div className="space-y-4">
           <p className="text-gray-600">
-            정말로 <strong>"{selectedItem?.title}"</strong>을(를) 삭제하시겠습니까?
+            정말로 <strong>"{selectedItem?.title}"</strong>을(를)
+            삭제하시겠습니까?
           </p>
-          <p className="text-sm text-red-600">삭제된 항목은 복구할 수 없습니다.</p>
+          <p className="text-sm text-red-600">
+            삭제된 항목은 복구할 수 없습니다.
+          </p>
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" className="flex-1" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
               취소
             </Button>
-            <Button variant="danger" className="flex-1" onClick={handleDeleteItem}>
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={handleDeleteItem}
+            >
               삭제
             </Button>
           </div>

@@ -11,23 +11,25 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+    "font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center";
 
   const variants = {
     primary:
-      "bg-primary text-white hover:bg-primary-600 active:bg-primary-700 shadow-sm hover:shadow-md",
+      "bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 shadow-sm hover:shadow-md border border-orange-500",
     secondary:
-      "bg-secondary text-white hover:bg-secondary-800 active:bg-secondary-950",
+      "bg-slate-700 text-white hover:bg-slate-800 active:bg-slate-900 border border-slate-700",
     outline:
-      "border-2 border-primary text-primary hover:bg-primary-50 active:bg-primary-100",
-    ghost: "text-primary hover:bg-primary-50 active:bg-primary-100",
-    danger: "bg-red-500 text-white hover:bg-red-600 active:bg-red-700",
+      "border-2 border-orange-500 text-orange-500 bg-white hover:bg-orange-50 active:bg-orange-100",
+    ghost: 
+      "text-orange-500 hover:bg-orange-50 active:bg-orange-100 border border-transparent",
+    danger: 
+      "bg-red-500 text-white hover:bg-red-600 active:bg-red-700 border border-red-500",
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-base",
-    lg: "px-6 py-3 text-lg",
+    sm: "px-3 py-1.5 text-sm min-h-[32px]",
+    md: "px-4 py-2 text-base min-h-[40px]",
+    lg: "px-6 py-3 text-lg min-h-[48px]",
   };
 
   return (

@@ -7,3 +7,6 @@ export { default as Modal } from "./Modal";
 export { default as Select } from "./Select";
 export { default as TextArea } from "./TextArea";
 export { default as BottomSheet } from "./BottomSheet";
+export { default as WalkFAB, WalkFABMini } from "./WalkFAB";
+export * from "./Skeleton";
+export * from "./ErrorState";

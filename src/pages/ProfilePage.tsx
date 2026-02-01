@@ -26,6 +26,9 @@ import {
   GraduationCap,
   X,
   Trash2,
+  AlertTriangle,
+  Loader2,
+  UserX,
 } from "lucide-react";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useServiceStore } from "../stores/useServiceStore";
@@ -66,6 +69,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const deleteAccount = useAuthStore((state) => state.deleteAccount);
   const bookings = useServiceStore((state) => state.bookings);
   const pets = usePetStore((state) => state.pets);
   const selectedPetId = usePetStore((state) => state.selectedPetId);
@@ -81,6 +85,9 @@ export default function ProfilePage() {
   const clearRecentPlaces = usePlaceStore((state) => state.clearRecentPlaces);
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // 예약 수 계산
   const upcomingBookings = bookings.filter((b) => b.status === "confirmed");
@@ -168,6 +175,25 @@ export default function ProfilePage() {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const success = await deleteAccount();
+      if (success) {
+        navigate("/login", { replace: true });
+      } else {
+        setDeleteError("회원 탈퇴에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (error) {
+      console.error("Delete account error:", error);
+      setDeleteError("오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -404,13 +430,22 @@ export default function ProfilePage() {
       {/* ============================================ */}
       {/* Logout Button */}
       {/* ============================================ */}
-      <div className="px-4 mt-6">
+      <div className="px-4 mt-6 space-y-3">
         <button
           onClick={() => setIsLogoutModalOpen(true)}
           className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-red-500 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors font-medium"
         >
           <LogOut size={20} />
           로그아웃
+        </button>
+
+        {/* Delete Account Button */}
+        <button
+          onClick={() => setIsDeleteModalOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm"
+        >
+          <UserX size={16} />
+          회원 탈퇴
         </button>
       </div>
 
@@ -453,6 +488,78 @@ export default function ProfilePage() {
               onClick={handleLogout}
             >
               로그아웃
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================ */}
+      {/* Delete Account Confirmation Modal */}
+      {/* ============================================ */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteError(null);
+        }}
+        title="회원 탈퇴"
+      >
+        <div className="py-4">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+          </div>
+          
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center mb-2">
+            정말 탈퇴하시겠어요?
+          </h3>
+          
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mb-6">
+            <p className="text-sm text-red-600 dark:text-red-400 mb-2 font-medium">
+              ⚠️ 탈퇴 시 모든 데이터가 삭제됩니다:
+            </p>
+            <ul className="text-sm text-red-600 dark:text-red-400 space-y-1">
+              <li>• 등록된 반려동물 정보</li>
+              <li>• 산책, 식사 등 모든 기록</li>
+              <li>• 캘린더 일정</li>
+              <li>• 가족 정보</li>
+            </ul>
+          </div>
+
+          <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-6">
+            이 작업은 되돌릴 수 없습니다.
+          </p>
+
+          {deleteError && (
+            <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm p-3 rounded-xl mb-4 text-center">
+              {deleteError}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1 rounded-xl"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeleteError(null);
+              }}
+              disabled={isDeleting}
+            >
+              취소
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1 rounded-xl"
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                "탈퇴하기"
+              )}
             </Button>
           </div>
         </div>

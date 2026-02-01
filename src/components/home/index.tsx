@@ -4,4 +4,6 @@ export { default as WalkMapModal } from "./WalkMapModal";
 export { default as InfoWidgetRow } from "./InfoWidgetRow";
 export { default as QuickActionGrid, QuickActionGridSimple } from "./QuickActionGrid";
 export { default as DailyLogFeed } from "./DailyLogFeed";
+export { default as ProviderConnectBanner } from "./ProviderConnectBanner";
+export { default as CareNoteSummary } from "./CareNoteSummary";
 export type { QuickActionType } from "./QuickActionGrid";

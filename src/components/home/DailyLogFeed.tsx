@@ -38,11 +38,12 @@ export default function DailyLogFeed() {
     return pets.find((p) => p.id === state.selectedPetId);
   });
 
-  const walks = useDailyLogStore((state) => state.walks);
-  const meals = useDailyLogStore((state) => state.meals);
-  const bowels = useDailyLogStore((state) => state.bowels);
-  const weights = useDailyLogStore((state) => state.weights);
-  const expenses = useDailyLogStore((state) => state.expenses);
+  // FIX: walkLogs, mealLogs, bowelLogs, weightLogs, expenseLogs (스토어 실제 속성명)
+  const walks = useDailyLogStore((state) => state.walkLogs);
+  const meals = useDailyLogStore((state) => state.mealLogs);
+  const bowels = useDailyLogStore((state) => state.bowelLogs);
+  const weights = useDailyLogStore((state) => state.weightLogs);
+  const expenses = useDailyLogStore((state) => state.expenseLogs);
 
   // Partner Care Notes
   const { careNotes, fetchCareNotes } = usePartnerStore();
@@ -65,7 +66,7 @@ export default function DailyLogFeed() {
     const items: FeedItem[] = [];
 
     // Walks
-    walks
+    (walks || [])
       .filter((w) => w.date === today && w.petId === selectedPetId)
       .forEach((walk) => {
         items.push({
@@ -83,7 +84,7 @@ export default function DailyLogFeed() {
       });
 
     // Meals
-    meals
+    (meals || [])
       .filter((m) => m.date === today && m.petId === selectedPetId)
       .forEach((meal) => {
         items.push({
@@ -99,7 +100,7 @@ export default function DailyLogFeed() {
       });
 
     // Bowels
-    bowels
+    (bowels || [])
       .filter((b) => b.date === today && b.petId === selectedPetId)
       .forEach((bowel) => {
         items.push({
@@ -120,7 +121,7 @@ export default function DailyLogFeed() {
       });
 
     // Weights
-    weights
+    (weights || [])
       .filter((w) => w.date === today && w.petId === selectedPetId)
       .forEach((weight) => {
         items.push({
@@ -136,7 +137,7 @@ export default function DailyLogFeed() {
       });
 
     // Expenses
-    expenses
+    (expenses || [])
       .filter((e) => e.date === today && e.petId === selectedPetId)
       .forEach((expense) => {
         items.push({
@@ -152,7 +153,7 @@ export default function DailyLogFeed() {
       });
 
     // Care Notes from Partners
-    careNotes
+    (careNotes || [])
       .filter((cn) => cn.date === today && cn.petId === selectedPetId)
       .forEach((careNote) => {
         const moodInfo = moodConfig[careNote.mood];

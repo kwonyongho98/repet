@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Home, Calendar, MapPin, User, Bell, Menu } from "lucide-react";
+import { Home, Calendar, MapPin, User, Bell, Menu, CheckCircle, XCircle, Info, AlertTriangle } from "lucide-react";
 import SideDrawer from "./SideDrawer";
 import { useThemeStore } from "../../stores/useThemeStore";
+import { useUIStore } from "../../stores/useUIStore";
 
 export default function Layout() {
   const location = useLocation();
@@ -10,6 +11,14 @@ export default function Layout() {
   
   // Theme Store - 초기 상태 복원
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
+  
+  // UI Store - Dynamic Tabs & Toast
+  const getBottomTabs = useUIStore((state) => state.getBottomTabs);
+  const toast = useUIStore((state) => state.toast);
+  const hideToast = useUIStore((state) => state.hideToast);
+  
+  // Get dynamic tabs based on app mode
+  const navItems = getBottomTabs();
   
   // 다크 모드 클래스 초기 적용
   useEffect(() => {
@@ -20,12 +29,15 @@ export default function Layout() {
     }
   }, [isDarkMode]);
 
-  const navItems = [
-    { path: "/home", icon: Home, label: "홈", emoji: "🏠" },
-    { path: "/home/calendar", icon: Calendar, label: "일기장", emoji: "📖" },
-    { path: "/home/service", icon: MapPin, label: "서비스", emoji: "🏥" },
-    { path: "/home/profile", icon: User, label: "마이", emoji: "👤" },
-  ];
+  // Toast icon helper
+  const getToastIcon = (type: string) => {
+    switch (type) {
+      case 'success': return <CheckCircle size={18} className="text-green-500" />;
+      case 'error': return <XCircle size={18} className="text-red-500" />;
+      case 'warning': return <AlertTriangle size={18} className="text-yellow-500" />;
+      default: return <Info size={18} className="text-blue-500" />;
+    }
+  };
 
   const isActive = (path: string) => {
     if (path === "/home") {
@@ -122,10 +134,45 @@ export default function Layout() {
         onClose={() => setIsDrawerOpen(false)} 
       />
 
+      {/* ============================================ */}
+      {/* Toast Notification */}
+      {/* ============================================ */}
+      {toast && (
+        <div 
+          className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down"
+          onClick={hideToast}
+        >
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg ${
+            toast.type === 'success' ? 'bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700' :
+            toast.type === 'error' ? 'bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700' :
+            toast.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700' :
+            'bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700'
+          }`}>
+            {getToastIcon(toast.type)}
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+              {toast.message}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Safe area for iOS */}
       <style>{`
         .safe-area-bottom {
           padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        @keyframes slide-down {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -20px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
         }
       `}</style>
     </div>
