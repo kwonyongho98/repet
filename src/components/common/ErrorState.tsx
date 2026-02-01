@@ -72,30 +72,49 @@ export function ErrorState({
 
 // ============================================
 // Empty State Component
+// ✅ FIX: type, description props 추가 (AlbumPage 등에서 사용)
 // ============================================
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
+  type?: string;
   icon?: React.ReactNode;
   emoji?: string;
-  title: string;
+  title?: string;
   message?: string;
+  description?: string;
   action?: {
     label: string;
     onClick: () => void;
   };
 }
 
+// ✅ EmptyState type별 기본값 설정
+const emptyStateConfigs: Record<string, { emoji: string; defaultTitle: string }> = {
+  photos: { emoji: '📷', defaultTitle: '사진이 없어요' },
+  logs: { emoji: '📝', defaultTitle: '기록이 없어요' },
+  pets: { emoji: '🐾', defaultTitle: '등록된 반려동물이 없어요' },
+  bookings: { emoji: '📅', defaultTitle: '예약이 없어요' },
+  default: { emoji: '📭', defaultTitle: '데이터가 없어요' },
+};
+
 export function EmptyState({
+  type,
   icon,
   emoji,
   title,
   message,
+  description,
   action,
 }: EmptyStateProps) {
+  const config = type ? (emptyStateConfigs[type] || emptyStateConfigs.default) : null;
+  const displayEmoji = emoji || config?.emoji;
+  const displayTitle = title || config?.defaultTitle || '데이터가 없어요';
+  const displayMessage = message || description;
+
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
-      {emoji ? (
-        <div className="text-6xl mb-4">{emoji}</div>
+      {displayEmoji ? (
+        <div className="text-6xl mb-4">{displayEmoji}</div>
       ) : icon ? (
         <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
           {icon}
@@ -103,12 +122,12 @@ export function EmptyState({
       ) : null}
 
       <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2 text-center">
-        {title}
+        {displayTitle}
       </h3>
 
-      {message && (
+      {displayMessage && (
         <p className="text-sm text-gray-500 dark:text-gray-400 text-center whitespace-pre-line mb-6">
-          {message}
+          {displayMessage}
         </p>
       )}
 

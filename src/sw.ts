@@ -12,6 +12,11 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare let self: ServiceWorkerGlobalScope;
 
+// ✅ FIX: SyncEvent 타입이 표준 lib에 없으므로 직접 선언
+interface SyncEvent extends ExtendableEvent {
+  tag: string;
+}
+
 // ============================================
 // Precache & Route
 // ============================================
@@ -152,7 +157,7 @@ registerRoute(
 // ============================================
 
 // Handle offline situations
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (event: FetchEvent) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return;
@@ -160,9 +165,11 @@ self.addEventListener('fetch', (event) => {
 
   // Handle navigation requests that fail
   if (event.request.mode === 'navigate') {
+    // ✅ FIX: respondWith에 undefined 가능성 제거
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/index.html') || caches.match('/');
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match('/index.html') || await caches.match('/');
+        return cached || new Response('Offline', { status: 503 });
       })
     );
   }
@@ -172,8 +179,8 @@ self.addEventListener('fetch', (event) => {
 // Background Sync (for offline actions)
 // ============================================
 
-// Register sync event for offline data submission
-self.addEventListener('sync', (event) => {
+// ✅ FIX: SyncEvent 타입 사용
+self.addEventListener('sync', (event: SyncEvent) => {
   if (event.tag === 'sync-daily-logs') {
     event.waitUntil(syncDailyLogs());
   }
@@ -197,16 +204,16 @@ async function syncWalkData() {
 // Push Notifications
 // ============================================
 
-self.addEventListener('push', (event) => {
+self.addEventListener('push', (event: PushEvent) => {
   if (!event.data) return;
 
   const data = event.data.json();
   
+  // ✅ FIX: vibrate를 제거 (NotificationOptions 표준에 없음)
   const options: NotificationOptions = {
     body: data.body || '새로운 알림이 있습니다',
     icon: '/icon-192x192.png',
     badge: '/icon-72x72.png',
-    vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
       primaryKey: data.primaryKey || 1,
@@ -221,7 +228,7 @@ self.addEventListener('push', (event) => {
 });
 
 // Handle notification click
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close();
 
   const urlToOpen = event.notification.data?.url || '/';
@@ -246,13 +253,13 @@ self.addEventListener('notificationclick', (event) => {
 // Install & Activate
 // ============================================
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (_event: ExtendableEvent) => {
   console.log('Service Worker installing...');
   // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', (event: ExtendableEvent) => {
   console.log('Service Worker activating...');
   // Claim all clients immediately
   event.waitUntil(self.clients.claim());
@@ -262,7 +269,7 @@ self.addEventListener('activate', (event) => {
 // Message Handler
 // ============================================
 
-self.addEventListener('message', (event) => {
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }

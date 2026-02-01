@@ -195,11 +195,12 @@ export const moodConfig: Record<CareMood, { emoji: string; label: string; color:
   happy: { emoji: '😄', label: '아주 좋아요', color: '#22c55e' },
   good: { emoji: '😊', label: '좋아요', color: '#84cc16' },
   normal: { emoji: '😐', label: '보통이에요', color: '#eab308' },
-  tired: { emoji: '😔', label: '피곤해요', color: '#f97316' },
+  tired: { emoji: '😴', label: '피곤해요', color: '#f97316' },
   sick: { emoji: '🤒', label: '아파요', color: '#ef4444' },
 };
 
-export const activityConfig = {
+// ✅ FIX: Record 타입으로 index signature 추가하여 string/number 인덱싱 에러 해결
+export const activityConfig: Record<string, { emoji: string; label: string }> = {
   nap: { emoji: '😴', label: '낮잠' },
   snack: { emoji: '🍪', label: '간식' },
   play: { emoji: '🎾', label: '놀이' },
@@ -262,12 +263,13 @@ export interface ConnectedPet {
 
 // ============================================
 // My Provider (Family가 보는 연결된 Provider)
-// ✅ FIXED: Made recentCareNotes and totalCareNotes optional
+// ✅ FIXED: businessName alias 추가, recentCareNotes/totalCareNotes optional
 // ============================================
 
 export interface MyProvider {
   id: string;
   name: string;
+  businessName?: string;           // ✅ alias for name (일부 컴포넌트에서 사용)
   serviceType: ServiceType;
   profileImage?: string | null;
   phone?: string | null;
