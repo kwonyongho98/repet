@@ -1,12 +1,12 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // ============================================
 // UI Store - View Mode, App Mode & Settings
 // ============================================
 
-export type ViewMode = 'family' | 'provider';
-export type AppMode = 'pure_diary' | 'connected';
+export type ViewMode = "family" | "provider";
+export type AppMode = "pure_diary" | "connected";
 
 // Tab Configuration
 export interface TabConfig {
@@ -20,33 +20,33 @@ interface UIState {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   toggleViewMode: () => void;
-  
+
   // App Mode (Pure Diary <-> Connected)
   // This is computed based on connected providers count
   appMode: AppMode;
   setAppMode: (mode: AppMode) => void;
-  
+
   // Dynamic Bottom Tabs based on App Mode
   getBottomTabs: () => TabConfig[];
-  
+
   // Sidebar State
   isSidebarOpen: boolean;
   openSidebar: () => void;
   closeSidebar: () => void;
   toggleSidebar: () => void;
-  
+
   // Bottom Sheet
   activeBottomSheet: string | null;
   openBottomSheet: (id: string) => void;
   closeBottomSheet: () => void;
-  
+
   // Toast Notifications
   toast: ToastState | null;
   showToast: (message: string, type?: ToastType, duration?: number) => void;
   hideToast: () => void;
 }
 
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastState {
   message: string;
@@ -59,17 +59,18 @@ interface ToastState {
 // ============================================
 
 const PURE_DIARY_TABS: TabConfig[] = [
-  { path: '/home', label: '홈', emoji: '🏠' },
-  { path: '/home/calendar', label: '일지', emoji: '📖' },
-  { path: '/home/album', label: '앨범', emoji: '📸' },
-  { path: '/home/profile', label: 'MY', emoji: '👤' },
+  { path: "/home", label: "홈", emoji: "🏠" },
+  { path: "/home/calendar", label: "일지", emoji: "📖" },
+  { path: "/home/album", label: "앨범", emoji: "📸" },
+  { path: "/home/profile", label: "MY", emoji: "👤" },
 ];
 
 const CONNECTED_TABS: TabConfig[] = [
-  { path: '/home', label: '홈', emoji: '🏠' },
-  { path: '/home/calendar', label: '일지', emoji: '📖' },
-  { path: '/home/communication', label: '소통', emoji: '💬' },
-  { path: '/home/profile', label: 'MY', emoji: '👤' },
+  { path: "/home", label: "홈", emoji: "🏠" },
+  { path: "/home/calendar", label: "일지", emoji: "📖" },
+  { path: "/home/album", label: "앨범", emoji: "📸" },
+  { path: "/home/communication", label: "소통", emoji: "💬" },
+  { path: "/home/profile", label: "MY", emoji: "👤" },
 ];
 
 // ============================================
@@ -82,69 +83,70 @@ export const useUIStore = create<UIState>()(
       // ============================================
       // View Mode
       // ============================================
-      viewMode: 'family',
-      
+      viewMode: "family",
+
       setViewMode: (mode) => set({ viewMode: mode }),
-      
+
       toggleViewMode: () => {
         const currentMode = get().viewMode;
-        set({ viewMode: currentMode === 'family' ? 'provider' : 'family' });
+        set({ viewMode: currentMode === "family" ? "provider" : "family" });
       },
-      
+
       // ============================================
       // App Mode
       // ============================================
-      appMode: 'pure_diary',
-      
+      appMode: "pure_diary",
+
       setAppMode: (mode) => set({ appMode: mode }),
-      
+
       // ============================================
       // Dynamic Bottom Tabs
       // ============================================
       getBottomTabs: () => {
         const { appMode } = get();
-        return appMode === 'connected' ? CONNECTED_TABS : PURE_DIARY_TABS;
+        return appMode === "connected" ? CONNECTED_TABS : PURE_DIARY_TABS;
       },
-      
+
       // ============================================
       // Sidebar
       // ============================================
       isSidebarOpen: false,
-      
+
       openSidebar: () => set({ isSidebarOpen: true }),
       closeSidebar: () => set({ isSidebarOpen: false }),
-      toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-      
+      toggleSidebar: () =>
+        set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+
       // ============================================
       // Bottom Sheet
       // ============================================
       activeBottomSheet: null,
-      
+
       openBottomSheet: (id) => set({ activeBottomSheet: id }),
       closeBottomSheet: () => set({ activeBottomSheet: null }),
-      
+
       // ============================================
       // Toast Notifications
       // ============================================
       toast: null,
-      
-      showToast: (message, type = 'info', duration = 3000) => {
+
+      showToast: (message, type = "info", duration = 3000) => {
         set({ toast: { message, type, duration } });
         setTimeout(() => {
           set({ toast: null });
         }, duration);
       },
-      
+
       hideToast: () => set({ toast: null }),
     }),
     {
-      name: 'repet-ui-storage',
+      name: "repet-ui-storage",
       partialize: (state) => ({
         viewMode: state.viewMode,
         appMode: state.appMode,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // ============================================
@@ -152,5 +154,5 @@ export const useUIStore = create<UIState>()(
 // ============================================
 export const updateAppModeBasedOnProviders = (providersCount: number) => {
   const { setAppMode } = useUIStore.getState();
-  setAppMode(providersCount > 0 ? 'connected' : 'pure_diary');
+  setAppMode(providersCount > 0 ? "connected" : "pure_diary");
 };
