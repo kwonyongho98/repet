@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Pet } from '../types/pet';
 import type { Database } from '../types/database';
-import { supabase } from '../lib/supabase';
+import { supabase, uploadImage, deleteImage } from '../lib/supabase';
 
 // Type aliases for type-safe inserts/updates
 type PetInsert = Database['public']['Tables']['pets']['Insert'];
@@ -27,6 +27,10 @@ interface PetState {
   deletePet: (id: string) => Promise<void>;
   getPetById: (id: string) => Pet | undefined;
   
+  // 🔥 NEW: Image upload
+  uploadPetImage: (petId: string, file: File) => Promise<string | null>;
+  removePetImage: (petId: string) => Promise<void>;
+  
   // Clear
   clearPets: () => void;
 }
@@ -34,7 +38,6 @@ interface PetState {
 export const usePetStore = create<PetState>()(
   persist(
     (set, get) => ({
-      // 초기 상태: 빈 배열 (더미 데이터 없음)
       pets: [],
       isLoading: false,
       error: null,
@@ -102,7 +105,6 @@ export const usePetStore = create<PetState>()(
             updatedAt: pet.updated_at,
           }));
 
-          // 첫 번째 펫 자동 선택
           const currentSelected = get().selectedPetId;
           const newSelectedId = pets.length > 0 
             ? (pets.find(p => p.id === currentSelected) ? currentSelected : pets[0].id)
@@ -180,7 +182,6 @@ export const usePetStore = create<PetState>()(
 
           set((state) => {
             const newPets = [...state.pets, newPet];
-            // 첫 번째 펫이면 자동 선택
             const selectedPetId = state.selectedPetId || newPet.id;
             return { pets: newPets, selectedPetId };
           });
@@ -230,10 +231,111 @@ export const usePetStore = create<PetState>()(
       },
 
       // ============================================
+      // 🔥 NEW: Upload pet profile image
+      // ============================================
+      uploadPetImage: async (petId: string, file: File) => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return null;
+
+          // 파일 확장자 추출
+          const ext = file.name.split('.').pop() || 'jpg';
+          // 고유 경로: userId/petId/timestamp.ext
+          const path = `${user.id}/${petId}/${Date.now()}.${ext}`;
+
+          // Supabase Storage에 업로드
+          const publicUrl = await uploadImage('PET_IMAGES', file, path);
+          if (!publicUrl) return null;
+
+          // DB의 profile_image 필드 업데이트
+          const { error } = await supabase
+            .from('pets')
+            .update({ profile_image: publicUrl })
+            .eq('id', petId);
+
+          if (error) {
+            console.error('Update pet image error:', error);
+            return null;
+          }
+
+          // 로컬 상태 업데이트
+          set((state) => ({
+            pets: state.pets.map((pet) =>
+              pet.id === petId
+                ? { ...pet, profileImage: publicUrl, updatedAt: new Date().toISOString() }
+                : pet
+            ),
+          }));
+
+          return publicUrl;
+        } catch (error) {
+          console.error('Upload pet image error:', error);
+          return null;
+        }
+      },
+
+      // ============================================
+      // 🔥 NEW: Remove pet profile image
+      // ============================================
+      removePetImage: async (petId: string) => {
+        try {
+          const pet = get().pets.find(p => p.id === petId);
+          if (!pet?.profileImage) return;
+
+          // Storage에서 파일 삭제 (URL에서 경로 추출)
+          try {
+            const url = new URL(pet.profileImage);
+            const pathMatch = url.pathname.match(/\/pet-images\/(.+)/);
+            if (pathMatch) {
+              await deleteImage('PET_IMAGES', pathMatch[1]);
+            }
+          } catch {
+            // URL 파싱 실패해도 DB는 업데이트
+          }
+
+          // DB 업데이트
+          const { error } = await supabase
+            .from('pets')
+            .update({ profile_image: null })
+            .eq('id', petId);
+
+          if (error) {
+            console.error('Remove pet image error:', error);
+            return;
+          }
+
+          // 로컬 상태 업데이트
+          set((state) => ({
+            pets: state.pets.map((p) =>
+              p.id === petId
+                ? { ...p, profileImage: undefined, updatedAt: new Date().toISOString() }
+                : p
+            ),
+          }));
+        } catch (error) {
+          console.error('Remove pet image error:', error);
+        }
+      },
+
+      // ============================================
       // Delete pet
       // ============================================
       deletePet: async (id) => {
         try {
+          // 펫 삭제 시 이미지도 함께 삭제
+          const pet = get().pets.find(p => p.id === id);
+          if (pet?.profileImage) {
+            try {
+              const url = new URL(pet.profileImage);
+              const pathMatch = url.pathname.match(/\/pet-images\/(.+)/);
+              if (pathMatch) {
+                await deleteImage('PET_IMAGES', pathMatch[1]);
+              }
+            } catch {
+              // 이미지 삭제 실패해도 펫 삭제는 진행
+            }
+          }
+
           const { error } = await supabase
             .from('pets')
             .delete()

@@ -1,4 +1,4 @@
-# 🐕 Repet 앱 - 홈화면 리디자인 완료 (v2.0)
+# 🐕 Repet 앱 - 홈화면 리디자인 완료 (v2.1)
 
 ## 📱 주요 변경사항 요약
 
@@ -11,11 +11,11 @@
 ├─────────────────────────────────────┤
 │ ┌────────┬──────────────┬────────┐ │
 │ │[강아지 │ 에당이        │  ← →  │ │  ← NewPetHeader
-│ │ 사진]  │ ♂ · 2살      │(스와이프)│ │
+│ │ 사진]  │ ♂ · 2살      │(스와이프)│ │     (스와이프 제스처 지원)
 │ └────────┴──────────────┴────────┘ │
 ├─────────────────────────────────────┤
 │ 🐾 에당이의 하루                     │  ← DashboardGrid
-│ ┌─────────┬─────────────┬────────┐ │
+│ ┌─────────┬─────────────┬────────┐ │     (다크모드 최적화)
 │ │ 가족/   │  가족 공유   │ 가족/  │ │
 │ │ 업체    │   메모장     │ 업체   │ │
 │ │ 연동    │    📝       │ 공유   │ │
@@ -28,7 +28,7 @@
 │ └─────────┴─────────────┴────────┘ │
 ├─────────────────────────────────────┤
 │ 🏢 팻츠템 (업체명)        ← 슬라이드 → │  ← ProviderSection
-│ ┌───────┬───────┬───────┬────────┐ │    (Provider 연결 시에만)
+│ ┌───────┬───────┬───────┬────────┐ │    (다크모드 최적화)
 │ │ 케어  │ 공지  │ 일정표│  케어  │ │
 │ │ 노트  │ 사항  │       │ 요청서 │ │
 │ └───────┴───────┴───────┴────────┘ │
@@ -40,26 +40,64 @@
 
 ---
 
+## ✅ v2.1 완료된 TODO 항목
+
+### 1. ✅ 케어 요청서 별도 페이지 구현
+- **파일**: `src/pages/family/CareRequestPage.tsx`
+- **경로**: `/home/care-request`
+- **기능**:
+  - 업체별 케어 요청 작성 (픽업, 드롭오프, 투약, 특별케어, 일정변경, 기타)
+  - 요청 목록 조회 (대기중/승인/거절 상태 표시)
+  - 업체별 필터링
+  - 업체 답변 확인
+
+### 2. ✅ 업체별 공지사항 필터링
+- **파일**: `src/pages/family/AnnouncementListPage.tsx`
+- **경로**: `/home/announcements`
+- **기능**:
+  - 전체/업체별 공지사항 필터 탭
+  - 공지 카테고리 (공지, 이벤트, 일정, 긴급)
+  - 고정 공지사항 상단 표시
+  - 공지 상세 모달
+
+### 3. ✅ 펫 전환 스와이프 제스처 추가
+- **파일**: `src/components/home/NewPetHeader.tsx`
+- **기능**:
+  - 터치 스와이프로 펫 전환 (좌/우)
+  - 부드러운 전환 애니메이션
+  - "← 스와이프로 전환 →" 힌트 텍스트
+  - 인디케이터 도트 개선
+
+### 4. ✅ 다크모드 위젯 색상 최적화
+- **DashboardGrid**: `bg-*-50` → `dark:bg-*-950/60`
+- **ProviderSection**: `bg-*-50` → `dark:bg-*-950/60`
+- 더 선명하고 읽기 좋은 다크모드 색상
+
+---
+
 ## 📁 수정/생성된 파일 목록
 
 ### 🆕 새로 생성된 파일
 
 | 파일 | 역할 |
 |------|------|
-| `src/components/home/NewPetHeader.tsx` | 펫 헤더 (사진 + 정보 + 스와이프 전환) |
-| `src/components/home/DashboardGrid.tsx` | 4개 위젯 그리드 (연동, 캘린더, 메모장, 앨범) |
-| `src/components/home/ProviderSection.tsx` | 업체별 위젯 섹션 (케어노트, 공지, 일정, 요청서) |
+| `src/components/home/NewPetHeader.tsx` | 펫 헤더 (스와이프 제스처 지원) |
+| `src/components/home/DashboardGrid.tsx` | 4개 위젯 그리드 (다크모드 최적화) |
+| `src/components/home/ProviderSection.tsx` | 업체별 위젯 섹션 (다크모드 최적화) |
+| `src/pages/family/CareRequestPage.tsx` | 케어 요청서 페이지 |
+| `src/pages/family/AnnouncementListPage.tsx` | 공지사항 목록 페이지 |
 
 ### ✏️ 수정된 파일
 
 | 파일 | 변경 내용 |
 |------|----------|
-| `src/pages/HomePage.tsx` | 완전히 새로운 홈화면 구조로 재작성 |
-| `src/pages/CalendarPage.tsx` | 체중 기록 기능 추가, 밥/응가/산책 표시 제거 |
-| `src/pages/family/FamilyBoardPage.tsx` | DailyTracker 클릭 가능, 산책 GPS 기능 추가 |
-| `src/components/familyBoard/DailyTracker.tsx` | 클릭 가능한 버튼으로 변경 |
-| `src/components/home/index.tsx` | 새 컴포넌트 export 추가 |
-| `src/stores/useUIStore.ts` | 탭바 5개 → 3개로 변경 |
+| `src/pages/HomePage.tsx` | 새로운 홈화면 구조 |
+| `src/pages/CalendarPage.tsx` | 체중 기록 기능 추가 |
+| `src/pages/family/FamilyBoardPage.tsx` | DailyTracker 클릭, 산책 GPS |
+| `src/components/familyBoard/DailyTracker.tsx` | 클릭 가능한 버튼 |
+| `src/components/home/index.tsx` | 새 컴포넌트 export |
+| `src/stores/useUIStore.ts` | 탭바 3개로 변경 |
+| `src/routes/index.tsx` | 새 페이지 라우트 추가 |
 
 ---
 
@@ -231,12 +269,15 @@
 
 ## 🚀 향후 개선사항 (TODO)
 
-- [ ] 케어 요청서 별도 페이지 구현
-- [ ] 업체별 공지사항 필터링
-- [ ] 펫 전환 스와이프 제스처 추가 (react-swipeable)
-- [ ] 다크모드 위젯 색상 최적화
+- [x] ~~케어 요청서 별도 페이지 구현~~ ✅
+- [x] ~~업체별 공지사항 필터링~~ ✅
+- [x] ~~펫 전환 스와이프 제스처 추가~~ ✅
+- [x] ~~다크모드 위젯 색상 최적화~~ ✅
+- [ ] 케어 요청서 Supabase DB 연동
+- [ ] 공지사항 Supabase DB 연동
+- [ ] 푸시 알림 연동
 
 ---
 
 *업데이트 일자: 2026-02-02*
-*버전: v2.0 - 홈화면 리디자인*
+*버전: v2.1 - TODO 항목 모두 완료*

@@ -10,3 +10,4 @@ export { default as BottomSheet } from "./BottomSheet";
 export { default as WalkFAB, WalkFABMini } from "./WalkFAB";
 export * from "./Skeleton";
 export * from "./ErrorState";
+export { default as PetProfileImageUpload } from "./PetProfileImageUpload";

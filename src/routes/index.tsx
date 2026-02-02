@@ -16,6 +16,8 @@ import SavedPlacesPage from "../pages/SavedPlacesPage";
 import AlbumPage from "../pages/AlbumPage";
 import CommunicationPage from "../pages/communication/CommunicationPage";
 import CareNoteDetailPage from "../pages/communication/CareNoteDetailPage";
+import CareRequestPage from "../pages/family/CareRequestPage";
+import AnnouncementListPage from "../pages/family/AnnouncementListPage";
 import ProviderDashboard from "../pages/provider/ProviderDashboard";
 import ProviderRegisterPage from "../pages/provider/ProviderRegisterPage";
 import ProviderNotesPage from "../pages/provider/ProviderNotesPage";
@@ -132,6 +134,14 @@ export const router = createBrowserRouter([
       {
         path: "communication/care-note/:noteId",
         element: <CareNoteDetailPage />,
+      },
+      {
+        path: "care-request",
+        element: <CareRequestPage />,
+      },
+      {
+        path: "announcements",
+        element: <AnnouncementListPage />,
       },
       // Booking Routes
       {

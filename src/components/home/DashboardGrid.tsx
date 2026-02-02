@@ -2,100 +2,53 @@ import { useNavigate } from "react-router-dom";
 import { usePetStore } from "../../stores/usePetStore";
 
 // ============================================
-// DashboardGrid - 에당이의 하루 (4개 위젯 그리드)
+// DashboardGrid v4 - 주황 테두리 포인트
 // ============================================
 
 interface WidgetItem {
   id: string;
   icon: string;
   label: string;
-  sublabel?: string;
   path: string;
-  bgColor: string;
-  darkBgColor: string;
+  iconBg: string;
+  darkIconBg: string;
 }
 
 const widgets: WidgetItem[] = [
-  {
-    id: "connect",
-    icon: "🔗",
-    label: "가족/업체",
-    sublabel: "연동",
-    path: "/home/provider-connect",
-    bgColor: "bg-emerald-100",
-    darkBgColor: "dark:bg-emerald-900/40",
-  },
-  {
-    id: "calendar",
-    icon: "📅",
-    label: "캘린더",
-    sublabel: "(몸무게)",
-    path: "/home/calendar",
-    bgColor: "bg-blue-100",
-    darkBgColor: "dark:bg-blue-900/40",
-  },
-  {
-    id: "memo",
-    icon: "📝",
-    label: "가족 공유",
-    sublabel: "메모장",
-    path: "/home/family-board",
-    bgColor: "bg-amber-100",
-    darkBgColor: "dark:bg-amber-900/40",
-  },
-  {
-    id: "album",
-    icon: "📷",
-    label: "가족/업체",
-    sublabel: "공유 앨범",
-    path: "/home/album",
-    bgColor: "bg-pink-100",
-    darkBgColor: "dark:bg-pink-900/40",
-  },
+  { id: "connect", icon: "🔗", label: "가족연동", path: "/home/provider-connect", iconBg: "bg-green-100", darkIconBg: "dark:bg-green-900/40" },
+  { id: "memo", icon: "📝", label: "공유메모장", path: "/home/family-board", iconBg: "bg-amber-100", darkIconBg: "dark:bg-amber-900/40" },
+  { id: "album", icon: "📷", label: "앨범", path: "/home/album", iconBg: "bg-blue-100", darkIconBg: "dark:bg-blue-900/40" },
+  { id: "calendar", icon: "📅", label: "캘린더", path: "/home/calendar", iconBg: "bg-purple-100", darkIconBg: "dark:bg-purple-900/40" },
 ];
 
 export default function DashboardGrid() {
   const navigate = useNavigate();
   const selectedPet = usePetStore((state) => {
-    const pets = state.pets;
-    const selectedPetId = state.selectedPetId;
-    return pets.find((p) => p.id === selectedPetId);
+    return state.pets.find((p) => p.id === state.selectedPetId);
   });
 
   return (
-    <div className="px-4 mb-4">
-      {/* 섹션 타이틀 */}
-      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-        🐾 {selectedPet?.name || "반려견"}의 하루
-      </h2>
-
-      {/* 4개 위젯 그리드 */}
-      <div className="grid grid-cols-2 gap-3">
-        {widgets.map((widget) => (
-          <button
-            key={widget.id}
-            onClick={() => navigate(widget.path)}
-            className={`
-              ${widget.bgColor} ${widget.darkBgColor}
-              rounded-2xl p-4 
-              flex flex-col items-center justify-center
-              min-h-[100px]
-              shadow-sm border border-gray-100 dark:border-slate-700
-              hover:scale-[1.02] active:scale-[0.98]
-              transition-all duration-200
-            `}
-          >
-            <span className="text-3xl mb-2">{widget.icon}</span>
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              {widget.label}
-            </span>
-            {widget.sublabel && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {widget.sublabel}
+    <div className="px-4 mb-3">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl px-4 pt-4 pb-3 shadow-sm border border-orange-200 dark:border-orange-800/50">
+        <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">
+          🐾 {selectedPet?.name || "반려견"}의 하루
+        </h2>
+        <div className="grid grid-cols-4 gap-3">
+          {widgets.map((w) => (
+            <button
+              key={w.id}
+              onClick={() => navigate(w.path)}
+              className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-150"
+            >
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${w.iconBg} ${w.darkIconBg}`}>
+                <span className="text-2xl">{w.icon}</span>
+              </div>
+              <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 text-center leading-tight">
+                {w.label}
               </span>
-            )}
-          </button>
-        ))}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
