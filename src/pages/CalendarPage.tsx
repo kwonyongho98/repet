@@ -237,10 +237,17 @@ export default function CalendarPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CombinedDailyItem | null>(
     null,
   );
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
+  // Weight form state
+  const [weightForm, setWeightForm] = useState({ weight: "", notes: "" });
+
+  // Daily Log Store - addWeightLog
+  const addWeightLog = useDailyLogStore((state) => state.addWeightLog);
 
   // Filter State
   const [activeFilter, setActiveFilter] = useState<CalendarFilterType>("all");
@@ -265,62 +272,29 @@ export default function CalendarPage() {
     description: "",
   });
 
+  // Handle weight submit
+  const handleWeightSubmit = () => {
+    if (!selectedPet || !weightForm.weight) return;
+
+    addWeightLog({
+      petId: selectedPet.id,
+      petName: selectedPet.name,
+      date: format(selectedDate, "yyyy-MM-dd"),
+      weight: parseFloat(weightForm.weight),
+      notes: weightForm.notes || undefined,
+    });
+
+    setIsWeightModalOpen(false);
+    setWeightForm({ weight: "", notes: "" });
+  };
+
   // ============================================
-  // Helper: Get Combined Daily Events
+  // Helper: Get Combined Daily Events (체중, 지출, 캘린더 이벤트만)
+  // 밥/응가/산책은 FamilyBoardPage에서 관리
   // ============================================
   const getCombinedDailyItems = (dateStr: string): CombinedDailyItem[] => {
     const items: CombinedDailyItem[] = [];
     const petFilter = (petId: string) => petId === selectedPetId;
-
-    // Walks
-    (walks || [])
-      .filter((w) => w.date === dateStr && petFilter(w.petId))
-      .forEach((walk) => {
-        items.push({
-          id: walk.id,
-          type: "walk",
-          time: walk.startTime,
-          title: `산책 ${walk.duration}분`,
-          subtitle: walk.distance
-            ? `${walk.distance}${walk.distanceUnit}`
-            : undefined,
-          petName: walk.petName,
-          color: getEventColor("walk"),
-          originalData: walk,
-        });
-      });
-
-    // Meals
-    (meals || [])
-      .filter((m) => m.date === dateStr && petFilter(m.petId))
-      .forEach((meal) => {
-        items.push({
-          id: meal.id,
-          type: "meal",
-          time: meal.time,
-          title: `${mealTypeLabels[meal.mealType]} ${meal.amount}g`,
-          subtitle: meal.foodName || foodTypeLabels[meal.foodType],
-          petName: meal.petName,
-          color: getEventColor("meal"),
-          originalData: meal,
-        });
-      });
-
-    // Bowels
-    (bowels || [])
-      .filter((b) => b.date === dateStr && petFilter(b.petId))
-      .forEach((bowel) => {
-        items.push({
-          id: bowel.id,
-          type: "bowel",
-          time: bowel.time,
-          title: bowelTypeLabels[bowel.bowelType],
-          subtitle: bowelConditionLabels[bowel.condition],
-          petName: bowel.petName,
-          color: getEventColor("bowel"),
-          originalData: bowel,
-        });
-      });
 
     // Weights
     (weights || [])
@@ -397,70 +371,23 @@ export default function CalendarPage() {
     return map;
   }, [filteredEvents]);
 
-  // Logs summary for calendar (with counts for stamp display)
+  // Logs summary for calendar (체중과 지출만 표시)
+  // 밥/응가/산책은 FamilyBoardPage에서 관리
   const logsByDate = useMemo(() => {
     const logsMap: Record<
       string,
       {
-        walkCount: number;
-        mealCount: number;
-        bowelCount: number;
         weightCount: number;
         expenseCount: number;
       }
     > = {};
     const petFilter = (petId: string) => petId === selectedPetId;
 
-    (walks || [])
-      .filter((w) => petFilter(w.petId))
-      .forEach((w) => {
-        if (!logsMap[w.date])
-          logsMap[w.date] = {
-            walkCount: 0,
-            mealCount: 0,
-            bowelCount: 0,
-            weightCount: 0,
-            expenseCount: 0,
-          };
-        logsMap[w.date].walkCount++;
-      });
-
-    (meals || [])
-      .filter((m) => petFilter(m.petId))
-      .forEach((m) => {
-        if (!logsMap[m.date])
-          logsMap[m.date] = {
-            walkCount: 0,
-            mealCount: 0,
-            bowelCount: 0,
-            weightCount: 0,
-            expenseCount: 0,
-          };
-        logsMap[m.date].mealCount++;
-      });
-
-    (bowels || [])
-      .filter((b) => petFilter(b.petId))
-      .forEach((b) => {
-        if (!logsMap[b.date])
-          logsMap[b.date] = {
-            walkCount: 0,
-            mealCount: 0,
-            bowelCount: 0,
-            weightCount: 0,
-            expenseCount: 0,
-          };
-        logsMap[b.date].bowelCount++;
-      });
-
     (weights || [])
       .filter((w) => petFilter(w.petId))
       .forEach((w) => {
         if (!logsMap[w.date])
           logsMap[w.date] = {
-            walkCount: 0,
-            mealCount: 0,
-            bowelCount: 0,
             weightCount: 0,
             expenseCount: 0,
           };
@@ -472,9 +399,6 @@ export default function CalendarPage() {
       .forEach((e) => {
         if (!logsMap[e.date])
           logsMap[e.date] = {
-            walkCount: 0,
-            mealCount: 0,
-            bowelCount: 0,
             weightCount: 0,
             expenseCount: 0,
           };
@@ -482,7 +406,7 @@ export default function CalendarPage() {
       });
 
     return logsMap;
-  }, [walks, meals, bowels, weights, expenses, selectedPetId]);
+  }, [weights, expenses, selectedPetId]);
 
   // Calendar days
   const calendarDays = useMemo(() => {
@@ -855,62 +779,9 @@ export default function CalendarPage() {
                   )}
                 </div>
 
-                {/* Daily Log Stamps (Grouped by Type) */}
+                {/* Daily Log Stamps (체중/지출만 표시) */}
                 {logs && isCurrentMonth && (
                   <div className="flex gap-1 justify-center items-center mt-auto pt-0.5 flex-wrap">
-                    {/* 킁킁 탐험 (산책) - 횟수 표시 */}
-                    {logs.walkCount > 0 && (
-                      <div className="flex items-center">
-                        <span className="text-xs">👃</span>
-                        {logs.walkCount > 1 && (
-                          <span
-                            className="text-[9px] text-green-600 font-medium"
-                            style={{ fontFamily: "Comic Sans MS, cursive" }}
-                          >
-                            x{logs.walkCount}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 냠냠 (식사) - 횟수 표시 */}
-                    {logs.mealCount > 0 && (
-                      <div className="flex items-center">
-                        <span className="text-xs">😋</span>
-                        {logs.mealCount > 1 && (
-                          <span
-                            className="text-[9px] text-orange-600 font-medium"
-                            style={{ fontFamily: "Comic Sans MS, cursive" }}
-                          >
-                            x{logs.mealCount}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 응가 (배변) - 이모지 반복 또는 +N */}
-                    {logs.bowelCount > 0 && (
-                      <div className="flex items-center">
-                        {logs.bowelCount === 1 && (
-                          <span className="text-xs">💩</span>
-                        )}
-                        {logs.bowelCount === 2 && (
-                          <span className="text-xs">💩💩</span>
-                        )}
-                        {logs.bowelCount >= 3 && (
-                          <>
-                            <span className="text-xs">💩</span>
-                            <span
-                              className="text-[9px] text-amber-600 font-medium"
-                              style={{ fontFamily: "Comic Sans MS, cursive" }}
-                            >
-                              x{logs.bowelCount}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    )}
-
                     {/* 몸무게 */}
                     {logs.weightCount > 0 && (
                       <span className="text-xs">⚖️</span>
@@ -1004,15 +875,26 @@ export default function CalendarPage() {
                 <div className="text-center py-12 text-gray-400">
                   <Calendar size={48} className="mx-auto mb-3 opacity-50" />
                   <p>이 날에는 일정이 없습니다</p>
-                  <button
-                    onClick={() => {
-                      setIsDayDetailOpen(false);
-                      openAddModalForDate(selectedDate);
-                    }}
-                    className="mt-4 text-orange-500 font-medium hover:text-orange-600"
-                  >
-                    + 새 일정 추가
-                  </button>
+                  <div className="flex flex-col gap-2 mt-4">
+                    <button
+                      onClick={() => {
+                        setIsDayDetailOpen(false);
+                        openAddModalForDate(selectedDate);
+                      }}
+                      className="text-orange-500 font-medium hover:text-orange-600"
+                    >
+                      + 새 일정 추가
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsDayDetailOpen(false);
+                        setIsWeightModalOpen(true);
+                      }}
+                      className="text-blue-500 font-medium hover:text-blue-600"
+                    >
+                      ⚖️ 체중 기록하기
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -1574,6 +1456,66 @@ export default function CalendarPage() {
               onClick={handleDeleteItem}
             >
               삭제
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================ */}
+      {/* Weight Record Modal */}
+      {/* ============================================ */}
+      <Modal
+        isOpen={isWeightModalOpen}
+        onClose={() => {
+          setIsWeightModalOpen(false);
+          setWeightForm({ weight: "", notes: "" });
+        }}
+        title={`⚖️ ${selectedPet?.name || "반려견"}의 몸무게`}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div className="text-center py-2">
+            <span className="text-5xl">🐕‍🦺</span>
+          </div>
+          <p className="text-sm text-gray-500 text-center">
+            {format(selectedDate, "M월 d일")} 체중 기록
+          </p>
+          <Input
+            label="몸무게 (kg)"
+            type="number"
+            step="0.1"
+            placeholder="30.5"
+            value={weightForm.weight}
+            onChange={(e) =>
+              setWeightForm({ ...weightForm, weight: e.target.value })
+            }
+          />
+          <TextArea
+            label="메모 📝"
+            placeholder="다이어트 중이에요!"
+            rows={2}
+            value={weightForm.notes}
+            onChange={(e) =>
+              setWeightForm({ ...weightForm, notes: e.target.value })
+            }
+          />
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsWeightModalOpen(false);
+                setWeightForm({ weight: "", notes: "" });
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              onClick={handleWeightSubmit}
+            >
+              📊 기록 완료!
             </Button>
           </div>
         </div>

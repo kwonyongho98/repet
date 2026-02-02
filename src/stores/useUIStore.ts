@@ -55,23 +55,19 @@ interface ToastState {
 }
 
 // ============================================
-// Tab Configurations
+// Tab Configurations - 3개 탭으로 통합
 // ============================================
 
 const PURE_DIARY_TABS: TabConfig[] = [
   { path: '/home', label: '홈', emoji: '🏠' },
-  { path: '/home/calendar', label: '일지', emoji: '📖' },
-  { path: '/home/service', label: '업체', emoji: '🔍' },
-  { path: '/home/album', label: '앨범', emoji: '📸' },
-  { path: '/home/profile', label: 'MY', emoji: '👤' },
+  { path: '/home/service', label: '업체 찾기', emoji: '🔍' },
+  { path: '/home/profile', label: 'my', emoji: '👤' },
 ];
 
 const CONNECTED_TABS: TabConfig[] = [
   { path: '/home', label: '홈', emoji: '🏠' },
-  { path: '/home/calendar', label: '일지', emoji: '📖' },
-  { path: '/home/service', label: '업체', emoji: '🔍' },
-  { path: '/home/communication', label: '소통', emoji: '💬' },
-  { path: '/home/profile', label: 'MY', emoji: '👤' },
+  { path: '/home/service', label: '업체 찾기', emoji: '🔍' },
+  { path: '/home/profile', label: 'my', emoji: '👤' },
 ];
 
 // ============================================

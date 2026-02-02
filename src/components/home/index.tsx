@@ -1,4 +1,7 @@
 export { default as PetSelector } from "./PetSelector";
+export { default as NewPetHeader } from "./NewPetHeader";
+export { default as DashboardGrid } from "./DashboardGrid";
+export { default as ProviderSection } from "./ProviderSection";
 export { default as WalkHeroWidget } from "./WalkHeroWidget";
 export { default as WalkMapModal } from "./WalkMapModal";
 export { default as InfoWidgetRow } from "./InfoWidgetRow";

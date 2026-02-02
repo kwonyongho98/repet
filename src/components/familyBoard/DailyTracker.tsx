@@ -1,5 +1,5 @@
 // ============================================
-// DailyTracker - 오늘의 밥/응가/산책 현황 요약
+// DailyTracker - 오늘의 밥/응가/산책 현황 (클릭 가능한 버튼)
 // ============================================
 
 interface DailyTrackerProps {
@@ -7,6 +7,9 @@ interface DailyTrackerProps {
   bowelCount: number;
   walkCount: number;
   totalWalkMinutes: number;
+  onMealClick?: () => void;
+  onBowelClick?: () => void;
+  onWalkClick?: () => void;
 }
 
 export function DailyTracker({
@@ -14,6 +17,9 @@ export function DailyTracker({
   bowelCount,
   walkCount,
   totalWalkMinutes,
+  onMealClick,
+  onBowelClick,
+  onWalkClick,
 }: DailyTrackerProps) {
   return (
     <div className="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-700 dark:to-indigo-800 rounded-2xl p-4 shadow-md">
@@ -26,18 +32,21 @@ export function DailyTracker({
           label="밥"
           value={`${mealCount}회`}
           bgColor="bg-white/20"
+          onClick={onMealClick}
         />
         <TrackerCard
           emoji="💩"
           label="응가"
           value={`${bowelCount}회`}
           bgColor="bg-white/20"
+          onClick={onBowelClick}
         />
         <TrackerCard
           emoji="🐾"
           label="산책"
           value={walkCount > 0 ? `${totalWalkMinutes}분` : "아직"}
           bgColor="bg-white/20"
+          onClick={onWalkClick}
         />
       </div>
     </div>
@@ -49,18 +58,20 @@ interface TrackerCardProps {
   label: string;
   value: string;
   bgColor: string;
+  onClick?: () => void;
 }
 
-function TrackerCard({ emoji, label, value, bgColor }: TrackerCardProps) {
+function TrackerCard({ emoji, label, value, bgColor, onClick }: TrackerCardProps) {
   return (
-    <div
-      className={`${bgColor} rounded-xl p-3 text-center backdrop-blur-sm`}
+    <button
+      onClick={onClick}
+      className={`${bgColor} rounded-xl p-3 text-center backdrop-blur-sm transition-all hover:scale-105 active:scale-95 cursor-pointer`}
     >
       <span className="text-2xl block mb-1">{emoji}</span>
       <span className="text-white text-xs font-medium block opacity-80">
         {label}
       </span>
       <span className="text-white text-base font-bold block">{value}</span>
-    </div>
+    </button>
   );
 }

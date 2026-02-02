@@ -23,6 +23,7 @@ import { DailyTracker } from "../../components/familyBoard/DailyTracker";
 import { MealSection } from "../../components/familyBoard/MealSection";
 import { BowelSection } from "../../components/familyBoard/BowelSection";
 import { WalkSection } from "../../components/familyBoard/WalkSection";
+import { WalkMapModal } from "../../components/home";
 
 // Types
 import type {
@@ -104,6 +105,7 @@ export default function FamilyBoardPage() {
   // ============================================
   const [isMealSheetOpen, setIsMealSheetOpen] = useState(false);
   const [isBowelSheetOpen, setIsBowelSheetOpen] = useState(false);
+  const [isWalkModalOpen, setIsWalkModalOpen] = useState(false);
 
   // Form States
   const [mealForm, setMealForm] = useState({
@@ -238,13 +240,16 @@ export default function FamilyBoardPage() {
 
       <div className="px-4 py-4 space-y-5 pb-24">
         {/* ============================================ */}
-        {/* Daily Tracker Summary */}
+        {/* Daily Tracker Summary - 클릭 가능한 버튼 */}
         {/* ============================================ */}
         <DailyTracker
           mealCount={todayMeals.length}
           bowelCount={todayBowels.length}
           walkCount={todayWalks.length}
           totalWalkMinutes={todayWalks.reduce((sum, w) => sum + w.duration, 0)}
+          onMealClick={() => setIsMealSheetOpen(true)}
+          onBowelClick={() => setIsBowelSheetOpen(true)}
+          onWalkClick={() => setIsWalkModalOpen(true)}
         />
 
         {/* ============================================ */}
@@ -612,6 +617,14 @@ export default function FamilyBoardPage() {
           </Button>
         </div>
       </BottomSheet>
+
+      {/* ============================================ */}
+      {/* Walk Map Modal - GPS 산책 기능 */}
+      {/* ============================================ */}
+      <WalkMapModal
+        isOpen={isWalkModalOpen}
+        onClose={() => setIsWalkModalOpen(false)}
+      />
     </div>
   );
 }
