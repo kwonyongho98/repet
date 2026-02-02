@@ -70,13 +70,18 @@ export default function ProviderNotesPage() {
     }
   }, [fetchConnectedPets, fetchCareNotes, myProvider]);
 
+  // 안전한 pets 배열 (undefined 방지)
+  const safePets = Array.isArray(connectedPets) ? connectedPets : [];
+
   // Filter pets by search - with safe null/undefined checks
-  const filteredPets = connectedPets.filter((pet) => {
-    const query = searchQuery.toLowerCase();
-    const petName = (pet?.petName || pet?.name || "").toLowerCase();
+  const filteredPets = safePets.filter((pet) => {
+    if (!pet) return false;
+    const query = (searchQuery || "").toLowerCase();
+    if (!query) return true;
+    const petName = (pet.petName || pet.name || "").toLowerCase();
     const familyName = (
-      pet?.familyName ||
-      pet?.family?.name ||
+      pet.familyName ||
+      pet.family?.name ||
       ""
     ).toLowerCase();
 
@@ -160,17 +165,23 @@ export default function ProviderNotesPage() {
   };
 
   // 펫 이름 가져오기 헬퍼
-  const getPetDisplayName = (pet: ConnectedPet) => {
-    return pet?.petName || pet?.name || "이름 없음";
+  const getPetDisplayName = (pet: ConnectedPet | null | undefined) => {
+    if (!pet) return "이름 없음";
+    return pet.petName || pet.name || "이름 없음";
   };
 
-  const getPetDisplayBreed = (pet: ConnectedPet) => {
-    return pet?.petBreed || pet?.breed || "품종 미상";
+  const getPetDisplayBreed = (pet: ConnectedPet | null | undefined) => {
+    if (!pet) return "품종 미상";
+    return pet.petBreed || pet.breed || "품종 미상";
   };
 
-  const getFamilyDisplayName = (pet: ConnectedPet) => {
-    return pet?.familyName || pet?.family?.name || "가족 정보 없음";
+  const getFamilyDisplayName = (pet: ConnectedPet | null | undefined) => {
+    if (!pet) return "가족 정보 없음";
+    return pet.familyName || pet.family?.name || "가족 정보 없음";
   };
+
+  // 안전한 careNotes 배열
+  const safeCareNotes = Array.isArray(careNotes) ? careNotes : [];
 
   return (
     <div className="min-h-full bg-gray-50 dark:bg-slate-900">
@@ -216,7 +227,7 @@ export default function ProviderNotesPage() {
           <div className="space-y-3">
             {filteredPets.map((pet) => (
               <div
-                key={pet.connectionId || pet.id}
+                key={pet.connectionId || pet.petId || pet.id}
                 className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm"
               >
                 <div className="flex items-center gap-4">
@@ -229,7 +240,7 @@ export default function ProviderNotesPage() {
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      getPetDisplayName(pet).charAt(0) || "?"
+                      (getPetDisplayName(pet) || "?").charAt(0)
                     )}
                   </div>
 
@@ -256,7 +267,7 @@ export default function ProviderNotesPage() {
                     )}
                   </div>
 
-                  {/* Action Button - 수정된 스타일 */}
+                  {/* Action Button */}
                   <button
                     onClick={() => handleWriteNote(pet)}
                     className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -275,13 +286,13 @@ export default function ProviderNotesPage() {
       </div>
 
       {/* Recent Notes */}
-      {careNotes.length > 0 && (
+      {safeCareNotes.length > 0 && (
         <div className="p-4 pt-0">
           <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             최근 작성한 알림장
           </h2>
           <div className="space-y-2">
-            {careNotes.slice(0, 5).map((note) => (
+            {safeCareNotes.slice(0, 5).map((note) => (
               <div
                 key={note.id}
                 className="bg-white dark:bg-slate-800 rounded-xl p-3 flex items-center gap-3"
@@ -318,7 +329,7 @@ export default function ProviderNotesPage() {
               <ArrowLeft size={24} />
             </button>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white flex-1">
-              {getPetDisplayName(selectedPet!)} 알림장
+              {getPetDisplayName(selectedPet)} 알림장
             </h2>
           </div>
 

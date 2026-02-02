@@ -41,19 +41,6 @@ type AnnouncementInsert =
   Database["public"]["Tables"]["announcements"]["Insert"];
 type AnnouncementUpdate =
   Database["public"]["Tables"]["announcements"]["Update"];
-type CalendarEventInsert =
-  Database["public"]["Tables"]["calendar_events"]["Insert"];
-
-// ============================================
-// Mood Config (캘린더 이벤트 제목용)
-// ============================================
-const moodEmojiMap: Record<string, string> = {
-  happy: '😄',
-  good: '😊',
-  normal: '😐',
-  tired: '😴',
-  sick: '🤒',
-};
 
 // ============================================
 // Provider Store Interface
@@ -142,12 +129,12 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       // CORRECTED: Use actual schema field names
       const providerInsert: ServiceProviderInsert = {
         owner_id: user.id,
-        business_name: data.name,
-        service_type: data.serviceType,
+        business_name: data.name, // ✅ business_name (DB 컬럼) = data.name (폼 필드)
+        service_type: data.serviceType, // ✅ service_type (DB 컬럼)
         description: data.description || null,
         address: data.address,
         phone: data.phone,
-        business_hours: data.businessHours || null,
+        business_hours: data.businessHours || null, // ✅ FIXED: data.ek → data.businessHours
         latitude: data.latitude || null,
         longitude: data.longitude || null,
       };
@@ -173,12 +160,12 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const newProvider: Provider = {
         id: provider.id,
         ownerId: provider.owner_id,
-        name: provider.business_name,
-        serviceType: provider.service_type,
+        name: provider.business_name, // ✅ Map business_name to name
+        serviceType: provider.service_type, // ✅ Map service_type to serviceType
         description: provider.description,
         address: provider.address,
         phone: provider.phone,
-        businessHours: provider.business_hours,
+        businessHours: provider.business_hours, // ✅ business_hours
         latitude: provider.latitude,
         longitude: provider.longitude,
         rating: provider.rating,
@@ -203,15 +190,15 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     try {
       const providerUpdate: ServiceProviderUpdate = {};
 
-      if (data.name !== undefined) providerUpdate.business_name = data.name;
+      if (data.name !== undefined) providerUpdate.business_name = data.name; // ✅
       if (data.serviceType !== undefined)
-        providerUpdate.service_type = data.serviceType;
+        providerUpdate.service_type = data.serviceType; // ✅
       if (data.description !== undefined)
         providerUpdate.description = data.description || null;
       if (data.address !== undefined) providerUpdate.address = data.address;
       if (data.phone !== undefined) providerUpdate.phone = data.phone;
       if (data.businessHours !== undefined)
-        providerUpdate.business_hours = data.businessHours || null;
+        providerUpdate.business_hours = data.businessHours || null; // ✅
       if (data.latitude !== undefined)
         providerUpdate.latitude = data.latitude || null;
       if (data.longitude !== undefined)
@@ -267,12 +254,12 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const myProvider: Provider = {
         id: provider.id,
         ownerId: provider.owner_id,
-        name: provider.business_name,
-        serviceType: provider.service_type,
+        name: provider.business_name, // ✅
+        serviceType: provider.service_type, // ✅
         description: provider.description,
         address: provider.address,
         phone: provider.phone,
-        businessHours: provider.business_hours,
+        businessHours: provider.business_hours, // ✅
         latitude: provider.latitude,
         longitude: provider.longitude,
         rating: provider.rating,
@@ -409,7 +396,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   // ============================================
   disconnectPet: async (connectionId) => {
     try {
-      const connectionUpdate: ProviderConnectionUpdate = { status: "ended" };
+      const connectionUpdate: ProviderConnectionUpdate = { status: "inactive" };
 
       const { error } = await supabase
         .from("provider_connections")
@@ -435,13 +422,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   // Fetch Connected Pets (FIXED)
   // ============================================
   fetchConnectedPets: async () => {
-    set({ isLoading: true });
     try {
       const { myProvider } = get();
-      if (!myProvider) {
-        set({ isLoading: false });
-        return;
-      }
+      if (!myProvider) return;
 
       const { data, error } = await supabase
         .from("provider_connections")
@@ -457,18 +440,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
       if (error) throw error;
 
-      // 오늘 날짜의 케어노트 확인
-      const today = new Date().toISOString().split('T')[0];
-      const { data: todayNotes } = await supabase
-        .from("care_notes")
-        .select("pet_id")
-        .eq("provider_id", myProvider.id)
-        .eq("date", today);
-
-      const todayNotePetIds = new Set((todayNotes || []).map(n => n.pet_id));
-
       const connectedPets: ConnectedPet[] = (data || []).map((conn: any) => ({
-        id: conn.pets?.id || conn.pet_id,
         connectionId: conn.id,
         petId: conn.pet_id,
         petName: conn.pets?.name || "",
@@ -479,22 +451,11 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         familyName: conn.families?.name || "",
         permissions: conn.permissions,
         connectedAt: conn.connected_at,
-        // 펫 정보 매핑 (중복 제공)
-        name: conn.pets?.name || "",
-        species: conn.pets?.species || "",
-        breed: conn.pets?.breed || "",
-        profileImage: conn.pets?.profile_image,
-        family: {
-          id: conn.family_id,
-          name: conn.families?.name || "",
-        },
-        hasTodayCareNote: todayNotePetIds.has(conn.pet_id),
       }));
 
-      set({ connectedPets, isLoading: false });
+      set({ connectedPets });
     } catch (error) {
       console.error("Fetch connected pets error:", error);
-      set({ isLoading: false });
     }
   },
 
@@ -533,8 +494,8 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         if (!providersMap.has(providerId)) {
           providersMap.set(providerId, {
             id: conn.service_providers.id,
-            name: conn.service_providers.business_name,
-            serviceType: conn.service_providers.service_type,
+            name: conn.service_providers.business_name, // ✅
+            serviceType: conn.service_providers.service_type, // ✅
             address: conn.service_providers.address,
             phone: conn.service_providers.phone,
             rating: conn.service_providers.rating,
@@ -578,7 +539,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       if (options.petId) query = query.eq("pet_id", options.petId);
       if (options.providerId)
         query = query.eq("provider_id", options.providerId);
-      if (options.familyId) query = query.eq("family_id", options.familyId);
       if (options.date) query = query.eq("date", options.date);
 
       const { data, error } = await query;
@@ -587,30 +547,23 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const careNotes: CareNote[] = (data || []).map((note: any) => ({
         id: note.id,
         providerId: note.provider_id,
-        providerName: note.service_providers?.business_name || "",
+        providerName: note.service_providers?.business_name || "", // ✅
         petId: note.pet_id,
         petName: note.pets?.name || "",
         petImage: note.pets?.profile_image,
-        familyId: note.family_id,
         date: note.date,
         bookingId: note.booking_id,
         mood: note.mood,
-        moodNote: note.mood_note,
         activities: note.activities,
         meals: note.meals,
         bowelLogs: note.bowel_logs,
         photos: note.photos || [],
-        comment: note.comment,
-        commentCount: note.comment_count || 0,
+        specialNotes: note.special_notes,
+        commentCount: note.comment_count,
         createdBy: note.created_by,
         createdByName: note.profiles?.name || "",
         createdAt: note.created_at,
         updatedAt: note.updated_at,
-        pet: note.pets ? {
-          id: note.pets.id,
-          name: note.pets.name,
-          profileImage: note.pets.profile_image,
-        } : undefined,
       }));
 
       set({ careNotes });
@@ -619,71 +572,27 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     }
   },
 
-  // ============================================
-  // Create Care Note (FIXED - family_id 추가 + 캘린더 연동)
-  // ============================================
   createCareNote: async (data) => {
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) {
-        console.error("User not authenticated");
-        return null;
-      }
+      if (!user) return null;
 
       const { myProvider } = get();
-      if (!myProvider) {
-        console.error("No provider found");
-        return null;
-      }
-
-      // family_id 가져오기 - data에서 직접 받거나, connection에서 조회
-      let familyId = data.familyId;
-      let petName = '';
-      
-      if (!familyId) {
-        // connection에서 family_id 조회
-        const { data: connection } = await supabase
-          .from("provider_connections")
-          .select("family_id, pets(name)")
-          .eq("provider_id", myProvider.id)
-          .eq("pet_id", data.petId)
-          .eq("status", "active")
-          .single();
-        
-        familyId = connection?.family_id;
-        petName = (connection as any)?.pets?.name || '';
-      }
-
-      if (!familyId) {
-        console.error("Family ID not found for this pet");
-        return null;
-      }
-
-      // 펫 이름 조회 (없으면)
-      if (!petName) {
-        const { data: petData } = await supabase
-          .from("pets")
-          .select("name")
-          .eq("id", data.petId)
-          .single();
-        petName = petData?.name || '';
-      }
+      if (!myProvider) return null;
 
       const careNoteInsert: CareNoteInsert = {
         provider_id: myProvider.id,
         pet_id: data.petId,
-        family_id: familyId,
         date: data.date,
         booking_id: data.bookingId || null,
         mood: data.mood,
-        mood_note: data.moodNote || null,
         activities: data.activities || null,
         meals: data.meals || null,
         bowel_logs: data.bowelLogs || null,
         photos: data.photos || [],
-        comment: data.comment || null,
+        special_notes: data.specialNotes || null,
         created_by: user.id,
       };
 
@@ -700,29 +609,24 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         )
         .single();
 
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       const newNote: CareNote = {
         id: note.id,
         providerId: note.provider_id,
-        providerName: note.service_providers?.business_name || "",
+        providerName: note.service_providers?.business_name || "", // ✅
         petId: note.pet_id,
         petName: note.pets?.name || "",
         petImage: note.pets?.profile_image,
-        familyId: note.family_id,
         date: note.date,
         bookingId: note.booking_id,
         mood: note.mood,
-        moodNote: note.mood_note,
         activities: note.activities,
         meals: note.meals,
         bowelLogs: note.bowel_logs,
         photos: note.photos || [],
-        comment: note.comment,
-        commentCount: note.comment_count || 0,
+        specialNotes: note.special_notes,
+        commentCount: note.comment_count,
         createdBy: note.created_by,
         createdByName: note.profiles?.name || "",
         createdAt: note.created_at,
@@ -730,54 +634,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       };
 
       set((state) => ({ careNotes: [newNote, ...state.careNotes] }));
-      
-      // ============================================
-      // 📅 캘린더 이벤트 자동 생성
-      // ============================================
-      try {
-        const moodEmoji = moodEmojiMap[data.mood] || '📝';
-        const providerName = myProvider.name || '업체';
-        const displayPetName = note.pets?.name || petName || '반려동물';
-        
-        // 캘린더 이벤트 제목: "📋 [업체명] 뽀삐 알림장 😊"
-        const eventTitle = `📋 [${providerName}] ${displayPetName} 알림장 ${moodEmoji}`;
-        
-        // 해당 날짜의 시작/끝 시간 설정
-        const eventDate = new Date(data.date);
-        const startTime = new Date(eventDate);
-        startTime.setHours(9, 0, 0, 0); // 오전 9시
-        const endTime = new Date(eventDate);
-        endTime.setHours(18, 0, 0, 0); // 오후 6시
-
-        const calendarEventInsert: CalendarEventInsert = {
-          family_id: familyId,
-          pet_id: data.petId,
-          title: eventTitle,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          event_type: 'other', // care_note 타입이 없으므로 other 사용
-          description: data.comment || `${providerName}에서 보낸 알림장입니다.`,
-          service_provider: providerName,
-          related_log_id: note.id,
-          related_log_type: null, // care_note는 별도 타입
-          created_by: user.id,
-        };
-
-        const { error: calendarError } = await supabase
-          .from("calendar_events")
-          .insert(calendarEventInsert);
-
-        if (calendarError) {
-          console.warn("Calendar event creation failed:", calendarError);
-          // 캘린더 이벤트 생성 실패해도 알림장은 성공으로 처리
-        } else {
-          console.log("Calendar event created for care note");
-        }
-      } catch (calendarErr) {
-        console.warn("Calendar sync error:", calendarErr);
-        // 캘린더 연동 실패해도 알림장 생성은 성공으로 처리
-      }
-      
       return newNote;
     } catch (error) {
       console.error("Create care note error:", error);
@@ -790,15 +646,14 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const careNoteUpdate: CareNoteUpdate = {};
 
       if (data.mood !== undefined) careNoteUpdate.mood = data.mood;
-      if (data.moodNote !== undefined) careNoteUpdate.mood_note = data.moodNote || null;
       if (data.activities !== undefined)
         careNoteUpdate.activities = data.activities || null;
       if (data.meals !== undefined) careNoteUpdate.meals = data.meals || null;
       if (data.bowelLogs !== undefined)
         careNoteUpdate.bowel_logs = data.bowelLogs || null;
       if (data.photos !== undefined) careNoteUpdate.photos = data.photos || [];
-      if (data.comment !== undefined)
-        careNoteUpdate.comment = data.comment || null;
+      if (data.specialNotes !== undefined)
+        careNoteUpdate.special_notes = data.specialNotes || null;
 
       const { error } = await supabase
         .from("care_notes")
@@ -822,12 +677,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   deleteCareNote: async (id) => {
     try {
-      // 연결된 캘린더 이벤트도 삭제
-      await supabase
-        .from("calendar_events")
-        .delete()
-        .eq("related_log_id", id);
-
       const { error } = await supabase.from("care_notes").delete().eq("id", id);
 
       if (error) throw error;
@@ -868,7 +717,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         authorName: c.profiles?.name || "",
         authorAvatar: c.profiles?.avatar_url,
         authorType: c.author_type,
-        content: c.content,
+        comment: c.comment,
         createdAt: c.created_at,
       }));
 
@@ -889,7 +738,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         care_note_id: data.careNoteId,
         author_id: user.id,
         author_type: data.authorType,
-        content: data.content,
+        comment: data.comment,
       };
 
       const { data: comment, error } = await supabase
@@ -912,7 +761,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         authorName: comment.profiles?.name || "",
         authorAvatar: comment.profiles?.avatar_url,
         authorType: comment.author_type,
-        content: comment.content,
+        comment: comment.comment,
         createdAt: comment.created_at,
       };
 
@@ -973,7 +822,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const announcements: Announcement[] = (data || []).map((a: any) => ({
         id: a.id,
         providerId: a.provider_id,
-        providerName: a.service_providers?.business_name || "",
+        providerName: a.service_providers?.business_name || "", // ✅
         title: a.title,
         content: a.content,
         isPinned: a.is_pinned,
@@ -1024,7 +873,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const newAnnouncement: Announcement = {
         id: announcement.id,
         providerId: announcement.provider_id,
-        providerName: announcement.service_providers?.business_name || "",
+        providerName: announcement.service_providers?.business_name || "", // ✅
         title: announcement.title,
         content: announcement.content,
         isPinned: announcement.is_pinned,

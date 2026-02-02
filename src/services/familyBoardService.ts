@@ -327,3 +327,109 @@ export const noteColors = [
 ];
 
 export const defaultNoteColor = '#fef3c7'; // 노랑
+
+// ============================================
+// Family Daily Tracker (가족 보드용 일일 기록 조회)
+// ============================================
+
+export interface FamilyDailyTrackerData {
+  date: string;
+  meals: Array<{
+    id: string;
+    pet_id: string;
+    time: string;
+    meal_type: string;
+    food_type: string;
+    amount: number;
+    created_by?: string;
+  }>;
+  bowels: Array<{
+    id: string;
+    pet_id: string;
+    time: string;
+    bowel_type: string;
+    condition: string;
+    created_by?: string;
+  }>;
+  walks: Array<{
+    id: string;
+    pet_id: string;
+    start_time: string;
+    end_time: string;
+    duration: number;
+    distance?: number;
+    created_by?: string;
+  }>;
+}
+
+/**
+ * Get today's meal/bowel/walk logs for all pets in a family
+ * Used in FamilyBoardPage for family-wide tracking
+ */
+export const getFamilyDailyTracker = async (
+  familyId: string,
+  date: string
+): Promise<FamilyDailyTrackerData> => {
+  // Get all pet IDs for this family
+  const { data: pets } = await supabase
+    .from('pets')
+    .select('id')
+    .eq('family_id', familyId);
+
+  const petIds = pets?.map(p => p.id) || [];
+
+  if (petIds.length === 0) {
+    return { date, meals: [], bowels: [], walks: [] };
+  }
+
+  const [mealsRes, bowelsRes, walksRes] = await Promise.all([
+    supabase
+      .from('meal_logs')
+      .select('id, pet_id, time, meal_type, food_type, amount, user_id')
+      .in('pet_id', petIds)
+      .eq('date', date)
+      .order('time', { ascending: true }),
+    supabase
+      .from('bowel_logs')
+      .select('id, pet_id, time, bowel_type, condition, user_id')
+      .in('pet_id', petIds)
+      .eq('date', date)
+      .order('time', { ascending: true }),
+    supabase
+      .from('walk_logs')
+      .select('id, pet_id, start_time, end_time, duration, distance, user_id')
+      .in('pet_id', petIds)
+      .eq('date', date)
+      .order('start_time', { ascending: true }),
+  ]);
+
+  return {
+    date,
+    meals: (mealsRes.data || []).map(m => ({
+      id: m.id,
+      pet_id: m.pet_id,
+      time: m.time,
+      meal_type: m.meal_type,
+      food_type: m.food_type,
+      amount: m.amount,
+      created_by: m.user_id,
+    })),
+    bowels: (bowelsRes.data || []).map(b => ({
+      id: b.id,
+      pet_id: b.pet_id,
+      time: b.time,
+      bowel_type: b.bowel_type,
+      condition: b.condition,
+      created_by: b.user_id,
+    })),
+    walks: (walksRes.data || []).map(w => ({
+      id: w.id,
+      pet_id: w.pet_id,
+      start_time: w.start_time,
+      end_time: w.end_time,
+      duration: w.duration,
+      distance: w.distance,
+      created_by: w.user_id,
+    })),
+  };
+};

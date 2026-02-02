@@ -4,3 +4,4 @@
 
 export { default as FilterChips, filterEventsByType, FilterSummaryBadge, FILTER_CONFIG } from "./FilterChips";
 export type { CalendarFilterType } from "./FilterChips";
+export { WeightEventCard } from "./WeightEventCard";

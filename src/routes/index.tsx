@@ -24,6 +24,7 @@ import ProviderSettingsPage from "../pages/provider/ProviderSettingsPage";
 import PartnerJoinPage from "../pages/partner/PartnerJoinPage";
 import ProviderAnnouncementPage from "../pages/provider/ProviderAnnouncementPage";
 import ProviderConnectPage from "../pages/family/ProviderConnectPage";
+import FamilyBoardPage from "../pages/family/FamilyBoardPage";
 import { MyBookingsPage, CreateBookingPage } from "../pages/booking";
 import TestPage from "../pages/TestPage";
 
@@ -99,6 +100,10 @@ export const router = createBrowserRouter([
       {
         path: "family",
         element: <FamilyPage />,
+      },
+      {
+        path: "family-board",
+        element: <FamilyBoardPage />,
       },
       {
         path: "service",

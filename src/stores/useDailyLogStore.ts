@@ -286,6 +286,33 @@ export const useDailyLogStore = create<DailyLogState>((set, get) => ({
         date: data.date, weight: data.weight, notes: data.notes, createdAt: data.created_at,
       };
       set((state) => ({ weightLogs: [newLog, ...state.weightLogs] }));
+
+      // 캘린더에 몸무게 이벤트 자동 생성
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('family_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.family_id) {
+          const eventDate = new Date(`${logData.date}T00:00:00`);
+          await supabase.from('calendar_events').insert({
+            family_id: profile.family_id,
+            pet_id: logData.petId,
+            title: `⚖️ 체중 ${logData.weight}kg`,
+            start_time: eventDate.toISOString(),
+            end_time: eventDate.toISOString(),
+            event_type: 'health',
+            description: logData.notes || `체중 기록: ${logData.weight}kg`,
+            related_log_id: data.id,
+            related_log_type: null,
+            created_by: user.id,
+          });
+        }
+      } catch (calError) {
+        console.error('Weight calendar event creation error (non-blocking):', calError);
+      }
     } catch (error) { console.error('Add weight log error:', error); }
   },
 

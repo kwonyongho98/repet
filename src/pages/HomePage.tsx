@@ -2,9 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Plus,
-  Check,
-  Trash2,
-  Pin,
   Loader2,
   ChevronRight,
   Store,
@@ -15,7 +12,6 @@ import { ko } from "date-fns/locale";
 // Stores
 import { usePetStore } from "../stores/usePetStore";
 import { useDailyLogStore } from "../stores/useDailyLogStore";
-import { useFamilyBoardStore } from "../stores/useFamilyBoardStore";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useFamilyStore } from "../stores/useFamilyStore";
 import { useProviderStore } from "../stores/useProviderStore";
@@ -30,7 +26,6 @@ import {
   BottomSheet,
   Input,
   TextArea,
-  Badge,
   WalkFAB,
 } from "../components/common";
 import {
@@ -47,20 +42,11 @@ import type { QuickActionType } from "../components/home";
 
 // Types
 import type {
-  MealType,
-  FoodType,
-  BowelType,
-  BowelCondition,
   ExpenseCategory,
 } from "../types/dailyLog";
 import {
-  cuteMealTypeLabels,
-  cuteFoodTypeLabels,
-  cuteBowelTypeLabels,
-  cuteBowelConditionLabels,
   cuteExpenseCategoryLabels,
 } from "../types/dailyLog";
-import { noteColors, defaultNoteColor } from "../types/familyBoard";
 import { serviceTypeConfig } from "../types/provider";
 
 // ============================================
@@ -135,20 +121,9 @@ export default function HomePage() {
     updateAppModeBasedOnProviders(myProviders.length);
   }, [myProviders.length]);
 
-  // Daily Log Actions
-  const addMealLog = useDailyLogStore((state) => state.addMealLog);
-  const addBowelLog = useDailyLogStore((state) => state.addBowelLog);
+  // Daily Log Actions (weight & expense only)
   const addWeightLog = useDailyLogStore((state) => state.addWeightLog);
   const addExpenseLog = useDailyLogStore((state) => state.addExpenseLog);
-
-  // Family Board
-  const todos = useFamilyBoardStore((state) => state.todos);
-  const notes = useFamilyBoardStore((state) => state.notes);
-  const addTodo = useFamilyBoardStore((state) => state.addTodo);
-  const toggleTodo = useFamilyBoardStore((state) => state.toggleTodo);
-  const deleteTodo = useFamilyBoardStore((state) => state.deleteTodo);
-  const addNote = useFamilyBoardStore((state) => state.addNote);
-  const deleteNote = useFamilyBoardStore((state) => state.deleteNote);
 
   // State
   const [activeSheet, setActiveSheet] = useState<QuickActionType | null>(null);
@@ -158,24 +133,8 @@ export default function HomePage() {
   const today = format(new Date(), "yyyy-MM-dd");
 
   // ============================================
-  // Form States
+  // Form States (weight & expense only — meal/bowel moved to FamilyBoardPage)
   // ============================================
-  const [mealForm, setMealForm] = useState({
-    time: format(new Date(), "HH:mm"),
-    mealType: "breakfast" as MealType,
-    foodType: "dry" as FoodType,
-    foodName: "",
-    amount: "",
-    medsTaken: false,
-    medsName: "",
-  });
-
-  const [bowelForm, setBowelForm] = useState({
-    time: format(new Date(), "HH:mm"),
-    bowelType: "both" as BowelType,
-    condition: "good" as BowelCondition,
-    notes: "",
-  });
 
   const [weightForm, setWeightForm] = useState({ weight: "", notes: "" });
 
@@ -186,54 +145,9 @@ export default function HomePage() {
     notes: "",
   });
 
-  const [todoForm, setTodoForm] = useState({ text: "", createdBy: "나" });
-  const [noteForm, setNoteForm] = useState({
-    title: "",
-    content: "",
-    color: defaultNoteColor,
-    createdBy: "나",
-  });
-
   // ============================================
-  // Submit Handlers
+  // Submit Handlers (weight & expense only)
   // ============================================
-  const handleMealSubmit = () => {
-    if (!selectedPet || !mealForm.amount) return;
-
-    addMealLog({
-      petId: selectedPet.id,
-      petName: selectedPet.name,
-      date: today,
-      time: mealForm.time,
-      mealType: mealForm.mealType,
-      foodType: mealForm.foodType,
-      foodName: mealForm.foodName || undefined,
-      amount: parseFloat(mealForm.amount),
-      medsTaken: mealForm.medsTaken,
-      medsName: mealForm.medsName || undefined,
-    });
-
-    setActiveSheet(null);
-    resetMealForm();
-  };
-
-  const handleBowelSubmit = () => {
-    if (!selectedPet) return;
-
-    addBowelLog({
-      petId: selectedPet.id,
-      petName: selectedPet.name,
-      date: today,
-      time: bowelForm.time,
-      bowelType: bowelForm.bowelType,
-      condition: bowelForm.condition,
-      notes: bowelForm.notes || undefined,
-    });
-
-    setActiveSheet(null);
-    resetBowelForm();
-  };
-
   const handleWeightSubmit = () => {
     if (!selectedPet || !weightForm.weight) return;
 
@@ -267,57 +181,6 @@ export default function HomePage() {
       amount: "",
       category: "food",
       description: "",
-      notes: "",
-    });
-  };
-
-  const handleTodoSubmit = () => {
-    if (!todoForm.text.trim()) return;
-    addTodo({
-      text: todoForm.text,
-      petId: selectedPet?.id,
-      petName: selectedPet?.name,
-      createdBy: todoForm.createdBy,
-    });
-    setTodoForm({ text: "", createdBy: "나" });
-  };
-
-  const handleNoteSubmit = () => {
-    if (!noteForm.title.trim() || !noteForm.content.trim()) return;
-    addNote({
-      title: noteForm.title,
-      content: noteForm.content,
-      color: noteForm.color,
-      petId: selectedPet?.id,
-      petName: selectedPet?.name,
-      createdBy: noteForm.createdBy,
-    });
-    setNoteForm({
-      title: "",
-      content: "",
-      color: defaultNoteColor,
-      createdBy: "나",
-    });
-  };
-
-  // Reset Helpers
-  const resetMealForm = () => {
-    setMealForm({
-      time: format(new Date(), "HH:mm"),
-      mealType: "breakfast",
-      foodType: "dry",
-      foodName: "",
-      amount: "",
-      medsTaken: false,
-      medsName: "",
-    });
-  };
-
-  const resetBowelForm = () => {
-    setBowelForm({
-      time: format(new Date(), "HH:mm"),
-      bowelType: "both",
-      condition: "good",
       notes: "",
     });
   };
@@ -369,7 +232,10 @@ export default function HomePage() {
       <InfoWidgetRow />
 
       {/* Section 5: Quick Actions */}
-      <QuickActionGridSimple onActionClick={setActiveSheet} />
+      <QuickActionGridSimple
+        onActionClick={setActiveSheet}
+        onNavigate={(path) => navigate(path)}
+      />
 
       {/* Section 6: Daily Log Feed */}
       <DailyLogFeed />
@@ -439,190 +305,7 @@ export default function HomePage() {
       {/* Bottom Sheets */}
       {/* ============================================ */}
 
-      {/* Meal Sheet */}
-      <BottomSheet
-        isOpen={activeSheet === "meal"}
-        onClose={() => setActiveSheet(null)}
-        title={`🍚 ${selectedPet?.name}의 밥 기록`}
-      >
-        <div className="space-y-4">
-          <div className="text-center py-2">
-            <span className="text-5xl">🍽️</span>
-          </div>
-          <Input
-            label="먹은 시간"
-            type="time"
-            value={mealForm.time}
-            onChange={(e) => setMealForm({ ...mealForm, time: e.target.value })}
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              어떤 끼니였어요?
-            </label>
-            <div className="grid grid-cols-4 gap-2">
-              {(Object.keys(cuteMealTypeLabels) as MealType[]).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setMealForm({ ...mealForm, mealType: type })}
-                  className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    mealForm.mealType === type
-                      ? "border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                      : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  {cuteMealTypeLabels[type]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              뭘 먹었어요?
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(cuteFoodTypeLabels) as FoodType[]).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setMealForm({ ...mealForm, foodType: type })}
-                  className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    mealForm.foodType === type
-                      ? "border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                      : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  {cuteFoodTypeLabels[type]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <Input
-            label="얼마나 먹었어요? (g)"
-            type="number"
-            placeholder="150"
-            value={mealForm.amount}
-            onChange={(e) =>
-              setMealForm({ ...mealForm, amount: e.target.value })
-            }
-          />
-          <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-            <input
-              type="checkbox"
-              id="medsTaken"
-              checked={mealForm.medsTaken}
-              onChange={(e) =>
-                setMealForm({ ...mealForm, medsTaken: e.target.checked })
-              }
-              className="w-5 h-5 rounded"
-            />
-            <label
-              htmlFor="medsTaken"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              💊 약도 먹었어요!
-            </label>
-          </div>
-          {mealForm.medsTaken && (
-            <Input
-              label="무슨 약이에요?"
-              placeholder="심장약, 관절영양제..."
-              value={mealForm.medsName}
-              onChange={(e) =>
-                setMealForm({ ...mealForm, medsName: e.target.value })
-              }
-            />
-          )}
-          <Button
-            variant="primary"
-            className="w-full rounded-2xl py-3"
-            onClick={handleMealSubmit}
-          >
-            🍚 냠냠 완료!
-          </Button>
-        </div>
-      </BottomSheet>
-
-      {/* Bowel Sheet */}
-      <BottomSheet
-        isOpen={activeSheet === "bowel"}
-        onClose={() => setActiveSheet(null)}
-        title={`💩 ${selectedPet?.name}의 배변 기록`}
-      >
-        <div className="space-y-4">
-          <div className="text-center py-2">
-            <span className="text-5xl">🚽</span>
-          </div>
-          <Input
-            label="언제 했어요?"
-            type="time"
-            value={bowelForm.time}
-            onChange={(e) =>
-              setBowelForm({ ...bowelForm, time: e.target.value })
-            }
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              뭘 했어요?
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(cuteBowelTypeLabels) as BowelType[]).map((type) => (
-                <button
-                  key={type}
-                  onClick={() =>
-                    setBowelForm({ ...bowelForm, bowelType: type })
-                  }
-                  className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    bowelForm.bowelType === type
-                      ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
-                      : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  {cuteBowelTypeLabels[type]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              상태는요?
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(cuteBowelConditionLabels) as BowelCondition[]).map(
-                (cond) => (
-                  <button
-                    key={cond}
-                    onClick={() =>
-                      setBowelForm({ ...bowelForm, condition: cond })
-                    }
-                    className={`py-2 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                      bowelForm.condition === cond
-                        ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
-                        : "border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400"
-                    }`}
-                  >
-                    {cuteBowelConditionLabels[cond]}
-                  </button>
-                ),
-              )}
-            </div>
-          </div>
-          <TextArea
-            label="메모 📝"
-            placeholder="특이사항이 있다면..."
-            rows={2}
-            value={bowelForm.notes}
-            onChange={(e) =>
-              setBowelForm({ ...bowelForm, notes: e.target.value })
-            }
-          />
-          <Button
-            variant="primary"
-            className="w-full rounded-2xl py-3"
-            onClick={handleBowelSubmit}
-          >
-            💩 기록 완료!
-          </Button>
-        </div>
-      </BottomSheet>
+      {/* Meal/Bowel/Board sheets moved to FamilyBoardPage */}
 
       {/* Weight Sheet */}
       <BottomSheet
@@ -721,145 +404,6 @@ export default function HomePage() {
           >
             💰 지출 기록!
           </Button>
-        </div>
-      </BottomSheet>
-
-      {/* Family Board Sheet */}
-      <BottomSheet
-        isOpen={activeSheet === "board"}
-        onClose={() => setActiveSheet(null)}
-        title="👨‍👩‍👧 우리 가족 보드"
-      >
-        <div className="space-y-6">
-          {/* To-Do */}
-          <div>
-            <h3 className="font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-              <Check size={18} /> 할 일 목록
-            </h3>
-            <div className="flex gap-2 mb-3">
-              <Input
-                placeholder="새 할일 입력..."
-                value={todoForm.text}
-                onChange={(e) =>
-                  setTodoForm({ ...todoForm, text: e.target.value })
-                }
-                className="flex-1"
-              />
-              <Button variant="primary" onClick={handleTodoSubmit}>
-                <Plus size={18} />
-              </Button>
-            </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {todos.map((todo) => (
-                <div
-                  key={todo.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl ${
-                    todo.isCompleted
-                      ? "bg-gray-100 dark:bg-slate-700"
-                      : "bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600"
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleTodo(todo.id, "나")}
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                      todo.isCompleted
-                        ? "bg-green-500 border-green-500"
-                        : "border-gray-300 dark:border-slate-500"
-                    }`}
-                  >
-                    {todo.isCompleted && (
-                      <Check size={14} className="text-white" />
-                    )}
-                  </button>
-                  <span
-                    className={`flex-1 text-sm ${
-                      todo.isCompleted
-                        ? "line-through text-gray-400 dark:text-gray-500"
-                        : "text-gray-700 dark:text-gray-200"
-                    }`}
-                  >
-                    {todo.text}
-                  </span>
-                  {todo.petName && <Badge variant="info">{todo.petName}</Badge>}
-                  <button
-                    onClick={() => deleteTodo(todo.id)}
-                    className="p-1 text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <h3 className="font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-              <Pin size={18} /> 메모
-            </h3>
-            <div className="space-y-2 mb-3 p-4 bg-gray-50 dark:bg-slate-700 rounded-2xl">
-              <Input
-                placeholder="메모 제목"
-                value={noteForm.title}
-                onChange={(e) =>
-                  setNoteForm({ ...noteForm, title: e.target.value })
-                }
-              />
-              <TextArea
-                placeholder="메모 내용..."
-                rows={2}
-                value={noteForm.content}
-                onChange={(e) =>
-                  setNoteForm({ ...noteForm, content: e.target.value })
-                }
-              />
-              <div className="flex gap-2 items-center">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  색상:
-                </span>
-                {noteColors.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setNoteForm({ ...noteForm, color: c.color })}
-                    className={`w-6 h-6 rounded-full border-2 ${
-                      noteForm.color === c.color
-                        ? "border-gray-800 dark:border-white"
-                        : "border-transparent"
-                    }`}
-                    style={{ backgroundColor: c.color }}
-                  />
-                ))}
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="ml-auto rounded-xl"
-                  onClick={handleNoteSubmit}
-                >
-                  추가
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-              {notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="p-3 rounded-2xl relative"
-                  style={{ backgroundColor: note.color }}
-                >
-                  <button
-                    onClick={() => deleteNote(note.id)}
-                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                  <p className="font-medium text-sm mb-1">{note.title}</p>
-                  <p className="text-xs text-gray-600 line-clamp-3">
-                    {note.content}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </BottomSheet>
 

@@ -38,7 +38,7 @@ export default function ProviderSchedulePage() {
   };
 
   // Mock schedule data - in real app, this would come from bookings
-  const todayPets = connectedPets; // For now, show all connected pets
+  const todayPets = connectedPets || []; // 안전하게 빈 배열 처리
 
   return (
     <div className="min-h-full bg-gray-50 dark:bg-slate-900">
@@ -126,6 +126,9 @@ export default function ProviderSchedulePage() {
             <p className="text-gray-500 dark:text-gray-400">
               이 날짜에 예정된 일정이 없습니다.
             </p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+              연결된 펫이 없거나 예약이 없습니다.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -133,55 +136,63 @@ export default function ProviderSchedulePage() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden">
               <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                  오늘의 손님
+                  오늘의 손님 ({todayPets.length}마리)
                 </span>
               </div>
               <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                {todayPets.map((pet) => (
-                  <div key={pet.id} className="p-4 flex items-center gap-4">
-                    {/* Time */}
-                    <div className="w-16 text-center">
-                      <div className="flex items-center justify-center gap-1 text-gray-400">
-                        <Clock size={14} />
-                        <span className="text-sm">종일</span>
+                {todayPets.map((pet) => {
+                  // 안전하게 이름 가져오기 (petName 또는 name)
+                  const petName = pet.petName || pet.name || '이름없음';
+                  const petBreed = pet.petBreed || pet.breed || '';
+                  const familyName = pet.familyName || pet.family?.name || '';
+                  const petImage = pet.petImage || pet.profileImage;
+                  
+                  return (
+                    <div key={pet.connectionId || pet.petId || pet.id} className="p-4 flex items-center gap-4">
+                      {/* Time */}
+                      <div className="w-16 text-center">
+                        <div className="flex items-center justify-center gap-1 text-gray-400">
+                          <Clock size={14} />
+                          <span className="text-sm">종일</span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Pet Info */}
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                      style={{ backgroundColor: pet.color || '#6366f1' }}
-                    >
-                      {pet.profileImage ? (
-                        <img
-                          src={pet.profileImage}
-                          alt={pet.name}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        pet.name.charAt(0)
-                      )}
-                    </div>
+                      {/* Pet Info */}
+                      <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                        style={{ backgroundColor: pet.color || '#6366f1' }}
+                      >
+                        {petImage ? (
+                          <img
+                            src={petImage}
+                            alt={petName}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          petName.charAt(0)
+                        )}
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 dark:text-white">
-                        {pet.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {pet.breed} · {pet.family.name}
-                      </p>
-                    </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 dark:text-white">
+                          {petName}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {petBreed}{petBreed && familyName ? ' · ' : ''}{familyName}
+                        </p>
+                      </div>
 
-                    {/* Status Badge */}
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      pet.hasTodayCareNote
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
-                    }`}>
-                      {pet.hasTodayCareNote ? '알림장 완료' : '알림장 미작성'}
-                    </span>
-                  </div>
-                ))}
+                      {/* Status Badge */}
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        pet.hasTodayCareNote
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+                      }`}>
+                        {pet.hasTodayCareNote ? '알림장 완료' : '알림장 미작성'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

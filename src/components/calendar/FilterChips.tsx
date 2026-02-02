@@ -22,6 +22,7 @@ export type CalendarFilterType =
   | "health" 
   | "care" 
   | "care_note"
+  | "weight"
   | "schedule"
   | "expense";
 
@@ -79,6 +80,14 @@ export const FILTER_CONFIG: FilterConfig[] = [
     types: ["care_note"],
   },
   {
+    id: "weight",
+    label: "몸무게",
+    icon: <Scale size={16} />,
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    types: ["weight"],
+  },
+  {
     id: "schedule",
     label: "일정",
     icon: <Hotel size={16} />,
@@ -92,7 +101,7 @@ export const FILTER_CONFIG: FilterConfig[] = [
     icon: <Wallet size={16} />,
     color: "text-pink-600 dark:text-pink-400",
     bgColor: "bg-pink-100 dark:bg-pink-900/30",
-    types: ["expense", "weight"],
+    types: ["expense"],
   },
 ];
 

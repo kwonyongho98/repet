@@ -3,6 +3,15 @@ import { persist } from "zustand/middleware";
 import type { TodoItem, PinnedNote } from "../types/familyBoard";
 import { defaultNoteColor } from "../types/familyBoard";
 
+// Daily tracker summary for the family board
+interface DailyTrackerSummary {
+  date: string;
+  mealCount: number;
+  bowelCount: number;
+  walkCount: number;
+  totalWalkMinutes: number;
+}
+
 interface FamilyBoardState {
   // 데이터
   todos: TodoItem[];

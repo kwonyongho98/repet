@@ -15,13 +15,50 @@ export default function CareNoteSummary() {
   const myProviders = useProviderStore((state) => state.myProviders);
   const careNotes = useProviderStore((state) => state.careNotes);
   
-  // FIX: myProviders가 undefined일 수 있으므로 방어 처리
-  // 또한 MyProvider 타입에 recentCareNotes 속성이 없으므로
-  // useProviderStore의 careNotes 상태를 직접 사용
-  const allRecentNotes = (careNotes || []).map(note => ({
-    ...note,
-    providerName: note.providerName || "파트너",
-  }));
+  // myProviders가 없거나 빈 배열인 경우 처리
+  if (!myProviders || myProviders.length === 0) {
+    return (
+      <div className="mx-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            📝 오늘의 케어노트
+          </h2>
+        </div>
+        
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 text-center">
+          <div className="text-4xl mb-2">📭</div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            연결된 업체가 없어요
+          </p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+            업체와 연결하면 케어노트를 받아볼 수 있어요
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Collect all recent care notes from all providers (안전하게 처리)
+  const allRecentNotes: (CareNote & { providerName: string })[] = [];
+  
+  myProviders.forEach(provider => {
+    // recentCareNotes가 있는 경우에만 처리
+    if (provider.recentCareNotes && Array.isArray(provider.recentCareNotes)) {
+      provider.recentCareNotes.forEach(note => {
+        allRecentNotes.push({ ...note, providerName: provider.name || '' });
+      });
+    }
+  });
+
+  // careNotes store에서도 가져오기 (fallback)
+  if (allRecentNotes.length === 0 && careNotes && careNotes.length > 0) {
+    careNotes.forEach(note => {
+      allRecentNotes.push({ 
+        ...note, 
+        providerName: note.providerName || '' 
+      });
+    });
+  }
   
   // Sort by date (newest first)
   allRecentNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -35,11 +72,6 @@ export default function CareNoteSummary() {
     }
   });
   
-  // If no providers connected at all
-  if (!myProviders || myProviders.length === 0) {
-    return null; // 연결된 업체가 없으면 이 섹션 자체를 숨김
-  }
-  
   // If no notes at all
   if (allRecentNotes.length === 0) {
     return (
@@ -51,7 +83,7 @@ export default function CareNoteSummary() {
         </div>
         
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 text-center">
-          <div className="text-4xl mb-2">🔭</div>
+          <div className="text-4xl mb-2">📭</div>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             아직 케어노트가 없어요
           </p>
@@ -119,7 +151,7 @@ interface CareNotePreviewCardProps {
 }
 
 function CareNotePreviewCard({ note, providerName, showDate }: CareNotePreviewCardProps) {
-  const mood = moodConfig[note.mood] || { emoji: "😐", label: "보통" };
+  const mood = note.mood ? moodConfig[note.mood] : null;
   const serviceType = note.provider?.serviceType 
     ? serviceTypeConfig[note.provider.serviceType] 
     : null;
@@ -147,12 +179,12 @@ function CareNotePreviewCard({ note, providerName, showDate }: CareNotePreviewCa
             className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
             style={{ backgroundColor: serviceType ? `${serviceType.color}20` : '#f3f4f6' }}
           >
-            {serviceType?.emoji || '🐾'}
+            {serviceType?.emoji || '🪺'}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-gray-900 dark:text-white">
-                {providerName}
+                {providerName || '업체'}
               </h3>
               {showDate && (
                 <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -165,17 +197,24 @@ function CareNotePreviewCard({ note, providerName, showDate }: CareNotePreviewCa
                 {note.pet.name}의 하루
               </p>
             )}
+            {note.petName && !note.pet && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {note.petName}의 하루
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-slate-700">
-            <span className="text-lg">{mood.emoji}</span>
-            <span className="text-xs text-gray-600 dark:text-gray-400">{mood.label}</span>
-          </div>
+          {mood && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-slate-700">
+              <span className="text-lg">{mood.emoji}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">{mood.label}</span>
+            </div>
+          )}
         </div>
         
         {/* Content preview */}
-        {note.comment && (
+        {(note.comment || note.specialNotes) && (
           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-            "{note.comment}"
+            "{note.comment || note.specialNotes}"
           </p>
         )}
         

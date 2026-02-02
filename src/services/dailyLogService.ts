@@ -531,3 +531,44 @@ export const getWeightHistory = async (petId: string): Promise<WeightLog[]> => {
   if (error) throw error;
   return data || [];
 };
+
+/**
+ * Create a weight log AND automatically add a calendar event
+ * Used for calendar integration of weight tracking
+ */
+export const createWeightLogWithCalendar = async (
+  log: Omit<Insertable<'weight_logs'>, 'id' | 'created_at'>,
+  familyId: string,
+  petName: string
+): Promise<WeightLog> => {
+  // Create weight log
+  const { data, error } = await supabase
+    .from('weight_logs')
+    .insert(log)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Create calendar event for this weight entry
+  try {
+    const eventDate = new Date(`${data.date}T00:00:00`);
+    await supabase.from('calendar_events').insert({
+      family_id: familyId,
+      pet_id: data.pet_id,
+      title: `⚖️ ${petName} 체중 ${data.weight}kg`,
+      start_time: eventDate.toISOString(),
+      end_time: eventDate.toISOString(),
+      event_type: 'health' as const,
+      description: data.notes || `체중 기록: ${data.weight}kg`,
+      related_log_id: data.id,
+      related_log_type: null,
+      created_by: log.user_id,
+    });
+  } catch (calendarError) {
+    // Non-blocking: calendar event creation failure shouldn't fail the weight log
+    console.error('Calendar event creation for weight failed:', calendarError);
+  }
+
+  return data;
+};

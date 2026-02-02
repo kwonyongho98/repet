@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   QrCode,
@@ -7,13 +7,13 @@ import {
   Check,
   AlertCircle,
   PawPrint,
-} from 'lucide-react';
-import { Button, Input } from '../../components/common';
-import { useProviderStore } from '../../stores/useProviderStore';
-import { usePetStore } from '../../stores/usePetStore';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { serviceTypeConfig } from '../../types/provider';
-import { supabase } from '../../lib/supabase';
+} from "lucide-react";
+import { Button, Input } from "../../components/common";
+import { useProviderStore } from "../../stores/useProviderStore";
+import { usePetStore } from "../../stores/usePetStore";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { serviceTypeConfig } from "../../types/provider";
+import { supabase } from "../../lib/supabase";
 
 export default function ProviderConnectPage() {
   const navigate = useNavigate();
@@ -23,8 +23,8 @@ export default function ProviderConnectPage() {
   const acceptInviteCode = useProviderStore((state) => state.acceptInviteCode);
   const fetchMyProviders = useProviderStore((state) => state.fetchMyProviders);
 
-  const [step, setStep] = useState<'code' | 'select' | 'complete'>('code');
-  const [inviteCode, setInviteCode] = useState('');
+  const [step, setStep] = useState<"code" | "select" | "complete">("code");
+  const [inviteCode, setInviteCode] = useState("");
   const [providerInfo, setProviderInfo] = useState<any>(null);
   const [selectedPetIds, setSelectedPetIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +40,7 @@ export default function ProviderConnectPage() {
   // Verify invite code
   const handleVerifyCode = async () => {
     if (!inviteCode.trim()) {
-      setError('초대 코드를 입력해주세요.');
+      setError("초대 코드를 입력해주세요.");
       return;
     }
 
@@ -50,38 +50,40 @@ export default function ProviderConnectPage() {
     try {
       // Find invite by code
       const { data: invite, error: inviteError } = await supabase
-        .from('provider_invites')
-        .select(`
+        .from("provider_invites")
+        .select(
+          `
           *,
-          service_providers (id, name, service_type, profile_image, phone, address)
-        `)
-        .eq('code', inviteCode.toUpperCase())
+          service_providers (id, business_name, service_type, phone, address)
+        `,
+        )
+        .eq("code", inviteCode.toUpperCase())
         .single();
 
       if (inviteError || !invite) {
-        setError('유효하지 않은 초대 코드입니다.');
+        setError("유효하지 않은 초대 코드입니다.");
         setIsLoading(false);
         return;
       }
 
       // Check if expired
       if (new Date(invite.expires_at) < new Date()) {
-        setError('만료된 초대 코드입니다.');
+        setError("만료된 초대 코드입니다.");
         setIsLoading(false);
         return;
       }
 
       // Check max uses
       if (invite.use_count >= invite.max_uses) {
-        setError('사용 횟수를 초과한 초대 코드입니다.');
+        setError("사용 횟수를 초과한 초대 코드입니다.");
         setIsLoading(false);
         return;
       }
 
       setProviderInfo(invite.service_providers);
-      setStep('select');
+      setStep("select");
     } catch (err) {
-      setError('오류가 발생했습니다.');
+      setError("오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -89,17 +91,17 @@ export default function ProviderConnectPage() {
 
   // Toggle pet selection
   const togglePetSelection = (petId: string) => {
-    setSelectedPetIds(prev =>
+    setSelectedPetIds((prev) =>
       prev.includes(petId)
-        ? prev.filter(id => id !== petId)
-        : [...prev, petId]
+        ? prev.filter((id) => id !== petId)
+        : [...prev, petId],
     );
   };
 
   // Connect to provider
   const handleConnect = async () => {
     if (selectedPetIds.length === 0) {
-      setError('연결할 아이를 선택해주세요.');
+      setError("연결할 아이를 선택해주세요.");
       return;
     }
 
@@ -107,24 +109,34 @@ export default function ProviderConnectPage() {
     setError(null);
 
     try {
-      const success = await acceptInviteCode(inviteCode.toUpperCase(), selectedPetIds);
+      const success = await acceptInviteCode(
+        inviteCode.toUpperCase(),
+        selectedPetIds,
+      );
       if (success) {
         // Refresh my providers list
         if (user?.familyId) {
           fetchMyProviders(user.familyId);
         }
-        setStep('complete');
+        setStep("complete");
       } else {
-        setError('연결에 실패했습니다.');
+        setError("연결에 실패했습니다.");
       }
     } catch (err) {
-      setError('오류가 발생했습니다.');
+      setError("오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const serviceConfig = providerInfo ? serviceTypeConfig[providerInfo.service_type as keyof typeof serviceTypeConfig] : null;
+  const serviceConfig = providerInfo
+    ? serviceTypeConfig[
+        providerInfo.service_type as keyof typeof serviceTypeConfig
+      ]
+    : null;
+
+  // providerInfo에서 이름 가져오기 (business_name 사용)
+  const providerName = providerInfo?.business_name || providerInfo?.name || "";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-50 dark:from-slate-900 dark:to-slate-800">
@@ -145,7 +157,7 @@ export default function ProviderConnectPage() {
 
       <div className="p-6 max-w-lg mx-auto">
         {/* Step: Enter Code */}
-        {step === 'code' && (
+        {step === "code" && (
           <div>
             <div className="text-center mb-8">
               <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -182,25 +194,31 @@ export default function ProviderConnectPage() {
                 onClick={handleVerifyCode}
                 disabled={isLoading || inviteCode.length < 6}
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '확인'}
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  "확인"
+                )}
               </Button>
             </div>
           </div>
         )}
 
         {/* Step: Select Pets */}
-        {step === 'select' && providerInfo && (
+        {step === "select" && providerInfo && (
           <div>
             {/* Provider Info */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 text-center">
               <div
                 className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-4"
-                style={{ backgroundColor: (serviceConfig?.color || '#6366f1') + '20' }}
+                style={{
+                  backgroundColor: (serviceConfig?.color || "#6366f1") + "20",
+                }}
               >
-                {serviceConfig?.emoji || '🏪'}
+                {serviceConfig?.emoji || "🪺"}
               </div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                {providerInfo.name}
+                {providerName}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {serviceConfig?.label || providerInfo.service_type}
@@ -226,13 +244,13 @@ export default function ProviderConnectPage() {
                       onClick={() => togglePetSelection(pet.id)}
                       className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
                         isSelected
-                          ? 'bg-green-50 dark:bg-green-900/30 ring-2 ring-green-500'
-                          : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700'
+                          ? "bg-green-50 dark:bg-green-900/30 ring-2 ring-green-500"
+                          : "bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700"
                       }`}
                     >
                       <div
                         className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
-                        style={{ backgroundColor: pet.color || '#6366f1' }}
+                        style={{ backgroundColor: pet.color || "#6366f1" }}
                       >
                         {pet.profileImage ? (
                           <img
@@ -255,11 +273,13 @@ export default function ProviderConnectPage() {
                       <div
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
                           isSelected
-                            ? 'bg-green-500 border-green-500'
-                            : 'border-gray-300 dark:border-slate-600'
+                            ? "bg-green-500 border-green-500"
+                            : "border-gray-300 dark:border-slate-600"
                         }`}
                       >
-                        {isSelected && <Check size={14} className="text-white" />}
+                        {isSelected && (
+                          <Check size={14} className="text-white" />
+                        )}
                       </div>
                     </button>
                   );
@@ -278,7 +298,7 @@ export default function ProviderConnectPage() {
               <Button
                 variant="secondary"
                 className="flex-1"
-                onClick={() => setStep('code')}
+                onClick={() => setStep("code")}
               >
                 이전
               </Button>
@@ -288,14 +308,18 @@ export default function ProviderConnectPage() {
                 onClick={handleConnect}
                 disabled={isLoading || selectedPetIds.length === 0}
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '연결하기'}
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  "연결하기"
+                )}
               </Button>
             </div>
           </div>
         )}
 
         {/* Step: Complete */}
-        {step === 'complete' && (
+        {step === "complete" && (
           <div className="text-center py-8">
             <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <Check className="w-12 h-12 text-green-500" />
@@ -304,7 +328,7 @@ export default function ProviderConnectPage() {
               연결 완료!
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
-              <span className="font-bold">{providerInfo?.name}</span>과
+              <span className="font-bold">{providerName}</span>과
               <br />
               연결되었습니다.
             </p>
@@ -317,7 +341,7 @@ export default function ProviderConnectPage() {
             <Button
               variant="primary"
               className="w-full"
-              onClick={() => navigate('/home')}
+              onClick={() => navigate("/home")}
             >
               홈으로 돌아가기
             </Button>
