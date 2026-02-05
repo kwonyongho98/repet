@@ -33,6 +33,9 @@ interface FamilyState {
   useInvite: (code: string, userId: string) => boolean;
   deleteInvite: (id: string) => Promise<void>;
   
+  // 가족 나가기
+  leaveFamily: (userId: string) => Promise<boolean>;
+  
   // Clear
   clearFamily: () => void;
 }
@@ -263,6 +266,55 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
     set((state) => ({
       invites: state.invites.filter((invite) => invite.id !== id),
     }));
+  },
+
+  // 가족 나가기
+  leaveFamily: async (userId: string) => {
+    try {
+      const { familyId } = get();
+      if (!familyId || !userId) return false;
+
+      // 1. family_members에서 삭제
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .delete()
+        .eq('family_id', familyId)
+        .eq('user_id', userId);
+
+      if (memberError) {
+        console.error('Leave family member error:', memberError);
+        throw memberError;
+      }
+
+      // 2. profiles에서 family_id 제거
+      const profileUpdate: ProfileUpdate = { family_id: null };
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Leave family profile error:', profileError);
+        throw profileError;
+      }
+
+      // 3. 로컬 상태 초기화
+      set({
+        members: [],
+        invites: [],
+        familyName: '',
+        familyId: '',
+        inviteCode: '',
+        currentUserId: '',
+        isLoading: false,
+        error: null,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Leave family error:', error);
+      return false;
+    }
   },
 
   clearFamily: () => {

@@ -215,6 +215,34 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // ============================================
+      // Check if family exists by invite code (without joining)
+      // ============================================
+      checkFamilyByInviteCode: async (
+        inviteCode: string,
+      ): Promise<{ exists: boolean; familyId?: string; familyName?: string }> => {
+        try {
+          const { data: family, error } = await supabase
+            .from("families")
+            .select("id, name")
+            .eq("invite_code", inviteCode.toUpperCase())
+            .single();
+
+          if (error || !family) {
+            return { exists: false };
+          }
+
+          return {
+            exists: true,
+            familyId: family.id,
+            familyName: family.name,
+          };
+        } catch (error) {
+          console.error("Check family error:", error);
+          return { exists: false };
+        }
+      },
+
+      // ============================================
       // Join existing family with invite code
       // ============================================
       joinFamily: async (inviteCode: string): Promise<boolean> => {
@@ -240,7 +268,7 @@ export const useAuthStore = create<AuthState>()(
             .select("id")
             .eq("family_id", family.id)
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
 
           if (existingMember) {
             console.error("Already a member of this family");
@@ -285,6 +313,50 @@ export const useAuthStore = create<AuthState>()(
           return true;
         } catch (error) {
           console.error("Join family error:", error);
+          return false;
+        }
+      },
+
+      // ============================================
+      // Leave current family
+      // ============================================
+      leaveFamily: async (): Promise<boolean> => {
+        const { user } = get();
+        if (!user || !user.familyId) return false;
+
+        try {
+          // 1. family_members에서 삭제
+          const { error: memberError } = await supabase
+            .from("family_members")
+            .delete()
+            .eq("family_id", user.familyId)
+            .eq("user_id", user.id);
+
+          if (memberError) {
+            console.error("Leave family member error:", memberError);
+            return false;
+          }
+
+          // 2. profiles에서 family_id 제거
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ family_id: null })
+            .eq("id", user.id);
+
+          if (profileError) {
+            console.error("Leave family profile error:", profileError);
+            return false;
+          }
+
+          // 3. 상태 업데이트
+          set({
+            user: { ...user, familyId: undefined },
+            isNewUser: true, // 가족이 없으면 다시 온보딩 상태
+          });
+
+          return true;
+        } catch (error) {
+          console.error("Leave family error:", error);
           return false;
         }
       },

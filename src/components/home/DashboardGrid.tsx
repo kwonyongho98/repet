@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { usePetStore } from "../../stores/usePetStore";
 
 // ============================================
-// DashboardGrid v4 - 주황 테두리 포인트
+// DashboardGrid v5 - 가족연동 버튼 제거됨
+// (가족연동은 사이드바로 이동)
 // ============================================
 
 interface WidgetItem {
@@ -14,8 +15,8 @@ interface WidgetItem {
   darkIconBg: string;
 }
 
+// 🔥 가족연동 제거, 3개 위젯만 유지
 const widgets: WidgetItem[] = [
-  { id: "connect", icon: "🔗", label: "가족연동", path: "/home/provider-connect", iconBg: "bg-green-100", darkIconBg: "dark:bg-green-900/40" },
   { id: "memo", icon: "📝", label: "공유메모장", path: "/home/family-board", iconBg: "bg-amber-100", darkIconBg: "dark:bg-amber-900/40" },
   { id: "album", icon: "📷", label: "앨범", path: "/home/album", iconBg: "bg-blue-100", darkIconBg: "dark:bg-blue-900/40" },
   { id: "calendar", icon: "📅", label: "캘린더", path: "/home/calendar", iconBg: "bg-purple-100", darkIconBg: "dark:bg-purple-900/40" },
@@ -33,7 +34,8 @@ export default function DashboardGrid() {
         <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">
           🐾 {selectedPet?.name || "반려견"}의 하루
         </h2>
-        <div className="grid grid-cols-4 gap-3">
+        {/* 🔥 3개 위젯이므로 grid-cols-3으로 변경 */}
+        <div className="grid grid-cols-3 gap-3">
           {widgets.map((w) => (
             <button
               key={w.id}

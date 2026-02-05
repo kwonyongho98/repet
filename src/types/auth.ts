@@ -37,7 +37,11 @@ export interface AuthState {
   // Onboarding
   checkIsNewUser: () => Promise<boolean>;
   completeOnboarding: (name: string, familyName?: string) => Promise<boolean>;
+  
+  // Family
+  checkFamilyByInviteCode: (inviteCode: string) => Promise<{ exists: boolean; familyId?: string; familyName?: string }>;
   joinFamily: (inviteCode: string) => Promise<boolean>;
+  leaveFamily: () => Promise<boolean>;
   
   // Legacy compatibility
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
